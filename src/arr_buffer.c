@@ -1,7 +1,11 @@
 #include "arr_buffer.h"
+
 #include "allocator.h"
+#include <stdio.h>
 
 ArrBuffer* arrBufferAllocate(Allocator* allocator, uint16_t len, uint16_t size) {
+    if (!allocator) return NULL;
+    if (len == 0 || size == 0) return NULL;
     ArrBuffer* buf = (ArrBuffer*)allocate(allocator, sizeof(ArrBuffer));
     if (!buf) return NULL;
     buf->raw = (uint8_t**)allocate(allocator, size * sizeof(uint8_t*));
@@ -36,15 +40,18 @@ ArrBuffer* arrBufferAllocate(Allocator* allocator, uint16_t len, uint16_t size) 
     return buf;
 }
 
-void arrBufferDeallocate(Allocator* allocator, ArrBuffer** buffer) {
-    if (!buffer || !(*buffer)) return;
+bool arrBufferDeallocate(Allocator* allocator, ArrBuffer** buffer) {
+    if (!allocator) return false;
+    if (!buffer || !(*buffer)) return false;
+    bool res = true;
     for (uint16_t i = 0; i < (*buffer)->arr_size; i++) {
-        deallocate(allocator, (*buffer)->raw[i]);
+        res = deallocate(allocator, (*buffer)->raw[i]);
     }
-    deallocate(allocator, (*buffer)->used);
-    deallocate(allocator, (*buffer)->raw);
-    deallocate(allocator, *buffer);
+    res = deallocate(allocator, (*buffer)->used);
+    res = deallocate(allocator, (*buffer)->raw);
+    res = deallocate(allocator, *buffer);
     *buffer = NULL;
+    return res;
 }
 
 void arrBufferClear(ArrBuffer* buffer) {
@@ -68,18 +75,16 @@ bool arrBufferIsFull(const ArrBuffer* buffer) {
 uint16_t arrBufferWrite(ArrBuffer* buffer, const uint8_t* data, uint16_t len) {
     if (!buffer || !data || len == 0) return 0;
     if (buffer->full) return 0;
-    if (buffer->len < len) {
-        len = buffer->len;
-    }
-    for (uint16_t i = 0; i < len; i++) {
+    uint16_t valid_len = (len < buffer->len) ? len : buffer->len;
+    for (uint16_t i = 0; i < valid_len; i++) {
         buffer->raw[buffer->head][i] = data[i];
     }
-    buffer->used[buffer->head] = len;
+    buffer->used[buffer->head] = valid_len;
     buffer->head = (uint16_t)((buffer->head + 1) % buffer->arr_size);
     if (buffer->head == buffer->tail) {
         buffer->full = true;
     }
-    return len;
+    return valid_len;
 }
 
 uint16_t arrBufferRead(ArrBuffer* buffer, uint8_t* data, uint16_t len) {

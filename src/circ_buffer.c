@@ -1,5 +1,5 @@
 #include "circ_buffer.h"
-#include "allocator.h"
+#include <bitmap_allocator/allocator.h>
 
 
 /**

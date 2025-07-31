@@ -1,57 +1,48 @@
 cmake_minimum_required(VERSION 3.20)
-
-
-message(STATUS "Updating Git submodules...")
-message(STATUS "dir: ${CMAKE_SOURCE_DIR}")
-execute_process(
-    COMMAND git submodule update --remote --merge
-    WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
-    RESULT_VARIABLE result
-)
-if(NOT result EQUAL 0)
-    message(FATAL_ERROR "Git submodule update failed with result: ${result}")
-endif()
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+option(BUILD_TESTS "Build unit tests" OFF)
 
 project(buffers C)
-set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
-# Source files
-set(C_SOURCES
-    arr_buffer.c
-    main.c)
 
-add_subdirectory(external/bitmap_allocator)
+include(FetchContent)
+message(STATUS "Fetching bitmap_allocator...")
+FetchContent_Declare(
+    bitmap_allocator
+    GIT_REPOSITORY https://github.com/nick-a-schneider/bitmap_allocator.git
+    GIT_TAG master
+)
+FetchContent_MakeAvailable(bitmap_allocator)
 
-# Executable target
-add_executable(${PROJECT_NAME}.elf
-    ${C_SOURCES})
-
-
-set(COMMON_C_FLAGS
-    -O0
-    -Wall
+add_library(buffers STATIC 
+    src/arr_buffer.c
 )
 
-# Common linker flags
-set(COMMON_LINK_FLAGS
-    -Wl,-Map=${PROJECT_NAME}.map,--cref
-    -lc -lm
+target_link_libraries(buffers PUBLIC
+    bitmap_allocator
 )
 
-# Apply to main target
-target_compile_options(${PROJECT_NAME}.elf PRIVATE ${COMMON_C_FLAGS} ${MCU_FLAGS})
-target_link_options(${PROJECT_NAME}.elf PRIVATE ${COMMON_LINK_FLAGS} ${MCU_FLAGS})
+target_include_directories(buffers PUBLIC
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+    $<INSTALL_INTERFACE:include>
+)
 
-# Also apply to the allocator target
-target_compile_options(bitmap_allocator PRIVATE ${COMMON_C_FLAGS} ${MCU_FLAGS})  
-target_link_libraries(${PROJECT_NAME}.elf PRIVATE bitmap_allocator)
 
-# Post-build: generate HEX and BIN, show size
-add_custom_command(TARGET ${PROJECT_NAME}.elf POST_BUILD
-    COMMAND ${CMAKE_OBJCOPY} -O ihex   $<TARGET_FILE:${PROJECT_NAME}.elf> ${PROJECT_NAME}.hex
-    COMMAND ${CMAKE_OBJCOPY} -O binary $<TARGET_FILE:${PROJECT_NAME}.elf> ${PROJECT_NAME}.bin
-    COMMAND ${CMAKE_SIZE_UTIL} $<TARGET_FILE:${PROJECT_NAME}.elf>
-    COMMENT "Generating .hex/.bin and displaying size")
+install(TARGETS buffers bitmap_allocator
+    EXPORT buffersTargets
+    ARCHIVE DESTINATION lib
+    LIBRARY DESTINATION lib
+    RUNTIME DESTINATION bin
+)
 
-# Clean up extra files if `make clean`
-set_property(DIRECTORY APPEND PROPERTY ADDITIONAL_MAKE_CLEAN_FILES
-    "${PROJECT_NAME}.hex" "${PROJECT_NAME}.bin" "${PROJECT_NAME}.map")
+install(EXPORT buffersTargets
+    FILE buffersTargets.cmake
+    NAMESPACE buffers::
+    DESTINATION lib/cmake/buffers
+)
+
+install(DIRECTORY include/ DESTINATION include)
+
+if(BUILD_TESTS)
+    enable_testing()
+    add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/test)
+endif()

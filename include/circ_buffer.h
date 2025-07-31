@@ -1,6 +1,6 @@
 #pragma once
 
-#include "allocator.h"
+#include <bitmap_allocator/allocator.h>
 #include <stdbool.h>
 #include <stdint.h>
 

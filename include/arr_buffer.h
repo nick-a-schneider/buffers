@@ -26,7 +26,7 @@ typedef struct {
 }
 
 ArrBuffer* arrBufferAllocate(Allocator* allocator, uint16_t len, uint16_t size);
-void arrBufferDeallocate(Allocator* allocator, ArrBuffer** buffer);
+bool arrBufferDeallocate(Allocator* allocator, ArrBuffer** buffer);
 
 void __arrBufferMoveTail(ArrBuffer* buffer, uint16_t offset);
 void __arrBufferMoveHead(ArrBuffer* buffer, uint16_t offset);
@@ -35,6 +35,5 @@ void arrBufferClear(ArrBuffer* buffer);
 
 bool arrBufferIsEmpty(const ArrBuffer* buffer);
 bool arrBufferIsFull(const ArrBuffer* buffer);
-
-uint16_t arrBufferWrite(ArrBuffer* buffer, const uint8_t data);
-uint16_t arrBufferRead(ArrBuffer* buffer, uint8_t* data);
+uint16_t arrBufferWrite(ArrBuffer* buffer, const uint8_t* data, uint16_t len);
+uint16_t arrBufferRead(ArrBuffer* buffer, uint8_t* data, uint16_t len);
