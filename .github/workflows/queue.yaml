@@ -1,4 +1,4 @@
-name: Array Buffer Unit Tests
+name: Queue Unit Tests
 
 on:
   push:
