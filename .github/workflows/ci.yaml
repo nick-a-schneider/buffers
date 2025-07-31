@@ -1,4 +1,4 @@
-name: Stack Unit Tests
+name: Buffer Unit Tests
 
 on:
   push:
@@ -25,6 +25,11 @@ jobs:
     - name: Compile Buffers
       run: cmake --build build --verbose
 
-    - name: Run Unit Tests
-      run: cd build/test/ && ./test_stack
+    - name: Run Buffer Unit Tests
+      run: cd build/test/ && ./test_buffer
 
+    - name: Run Queue Unit Tests
+      run: cd build/test/ && ./test_queue
+
+    - name: Run Stack Unit Tests
+      run: cd build/test/ && ./test_stack
