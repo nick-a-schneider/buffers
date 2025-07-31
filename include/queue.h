@@ -6,34 +6,31 @@
 
 typedef struct {
     bool full;
-    uint8_t** raw;
-    uint16_t arr_size;
-    uint16_t len;
-    uint16_t* used;
+    uint8_t** slots;
+    uint16_t slot_cnt;
+    uint16_t slot_len;
+    uint16_t* msg_len;
     uint16_t head;
     uint16_t tail;
-} ArrBuffer;
+} Queue;
 
-#define CREATE_ARR_BUFFER(...) {    \
-    .raw = NULL,                    \
-    .arr_size = 0,                  \
-    .len = 0,                       \
-    .used = NULL,                   \
-    .head = 0,                      \
-    .tail = 0,                      \
-    .full = false,                  \
-    __VA_ARGS__                     \
+#define CREATE_QUEUE(...) { \
+    .slots = NULL,          \
+    .slot_cnt = 0,          \
+    .slot_len = 0,          \
+    .msg_len = NULL,        \
+    .head = 0,              \
+    .tail = 0,              \
+    .full = false,          \
+    __VA_ARGS__             \
 }
 
-ArrBuffer* arrBufferAllocate(Allocator* allocator, uint16_t len, uint16_t size);
-bool arrBufferDeallocate(Allocator* allocator, ArrBuffer** buffer);
+Queue* queueAllocate(Allocator* allocator, uint16_t slot_len, uint16_t size);
+bool queueDeallocate(Allocator* allocator, Queue** queue);
 
-void __arrBufferMoveTail(ArrBuffer* buffer, uint16_t offset);
-void __arrBufferMoveHead(ArrBuffer* buffer, uint16_t offset);
+void queueClear(Queue* queue);
 
-void arrBufferClear(ArrBuffer* buffer);
-
-bool arrBufferIsEmpty(const ArrBuffer* buffer);
-bool arrBufferIsFull(const ArrBuffer* buffer);
-uint16_t arrBufferWrite(ArrBuffer* buffer, const uint8_t* data, uint16_t len);
-uint16_t arrBufferRead(ArrBuffer* buffer, uint8_t* data, uint16_t len);
+bool queueIsEmpty(const Queue* queue);
+bool queueIsFull(const Queue* queue);
+uint16_t queueWrite(Queue* queue, const uint8_t* data, uint16_t slot_len);
+uint16_t queueRead(Queue* queue, uint8_t* data, uint16_t slot_len);

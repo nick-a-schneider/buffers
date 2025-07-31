@@ -1,103 +1,103 @@
-#include "arr_buffer.h"
+#include "queue.h"
 
 #include "allocator.h"
 #include <stdio.h>
 
-ArrBuffer* arrBufferAllocate(Allocator* allocator, uint16_t len, uint16_t size) {
+Queue* queueAllocate(Allocator* allocator, uint16_t slot_len, uint16_t size) {
     if (!allocator) return NULL;
-    if (len == 0 || size == 0) return NULL;
-    ArrBuffer* buf = (ArrBuffer*)allocate(allocator, sizeof(ArrBuffer));
-    if (!buf) return NULL;
-    buf->raw = (uint8_t**)allocate(allocator, size * sizeof(uint8_t*));
-    if (!(buf->raw)) {
-        deallocate(allocator, buf);
+    if (slot_len == 0 || size == 0) return NULL;
+    Queue* queue = (Queue*)allocate(allocator, sizeof(Queue));
+    if (!queue) return NULL;
+    queue->slots = (uint8_t**)allocate(allocator, size * sizeof(uint8_t*));
+    if (!(queue->slots)) {
+        deallocate(allocator, queue);
         return NULL;
     }
-    buf->used = (uint16_t*)allocate(allocator, size * sizeof(uint16_t));
-    if (!(buf->used)) {
-        deallocate(allocator, buf->raw);
-        deallocate(allocator, buf);
+    queue->msg_len = (uint16_t*)allocate(allocator, size * sizeof(uint16_t));
+    if (!(queue->msg_len)) {
+        deallocate(allocator, queue->slots);
+        deallocate(allocator, queue);
         return NULL;
     }
     for (uint16_t i = 0; i < size; i++) {
-        uint8_t* elem = (uint8_t*)allocate(allocator, len * sizeof(uint8_t));
+        uint8_t* elem = (uint8_t*)allocate(allocator, slot_len * sizeof(uint8_t));
         if (!(elem)) {
             for (uint16_t j = 0; j < i; j++) {
-                deallocate(allocator, buf->raw[j]);
+                deallocate(allocator, queue->slots[j]);
             }
-            deallocate(allocator, buf->used);
-            deallocate(allocator, buf->raw);
-            deallocate(allocator, buf);
+            deallocate(allocator, queue->msg_len);
+            deallocate(allocator, queue->slots);
+            deallocate(allocator, queue);
             return NULL;
         }
-        buf->raw[i] = elem;
+        queue->slots[i] = elem;
     }
-    buf->arr_size = size;
-    buf->len = len;
-    buf->head = 0;
-    buf->tail = 0;
-    buf->full = false;
-    return buf;
+    queue->slot_cnt = size;
+    queue->slot_len = slot_len;
+    queue->head = 0;
+    queue->tail = 0;
+    queue->full = false;
+    return queue;
 }
 
-bool arrBufferDeallocate(Allocator* allocator, ArrBuffer** buffer) {
+bool queueDeallocate(Allocator* allocator, Queue** queue) {
     if (!allocator) return false;
-    if (!buffer || !(*buffer)) return false;
+    if (!queue || !(*queue)) return false;
     bool res = true;
-    for (uint16_t i = 0; i < (*buffer)->arr_size; i++) {
-        res = deallocate(allocator, (*buffer)->raw[i]);
+    for (uint16_t i = 0; i < (*queue)->slot_cnt; i++) {
+        res = deallocate(allocator, (*queue)->slots[i]);
     }
-    res = deallocate(allocator, (*buffer)->used);
-    res = deallocate(allocator, (*buffer)->raw);
-    res = deallocate(allocator, *buffer);
-    *buffer = NULL;
+    res = deallocate(allocator, (*queue)->msg_len);
+    res = deallocate(allocator, (*queue)->slots);
+    res = deallocate(allocator, *queue);
+    *queue = NULL;
     return res;
 }
 
-void arrBufferClear(ArrBuffer* buffer) {
-    if (!buffer) return;
-    for (uint16_t i = 0; i < buffer->arr_size; i++) {
-        buffer->used[i] = 0;
+void queueClear(Queue* queue) {
+    if (!queue) return;
+    for (uint16_t i = 0; i < queue->slot_cnt; i++) {
+        queue->msg_len[i] = 0;
     }
-    buffer->head = 0;
-    buffer->tail = 0;
-    buffer->full = false;
+    queue->head = 0;
+    queue->tail = 0;
+    queue->full = false;
 }
 
-bool arrBufferIsEmpty(const ArrBuffer* buffer) {
-    return !buffer->full && buffer->head == buffer->tail;
+bool queueIsEmpty(const Queue* queue) {
+    return !queue->full && queue->head == queue->tail;
 }
 
-bool arrBufferIsFull(const ArrBuffer* buffer) {
-    return buffer->full;
+bool queueIsFull(const Queue* queue) {
+    return queue->full;
 }
 
-uint16_t arrBufferWrite(ArrBuffer* buffer, const uint8_t* data, uint16_t len) {
-    if (!buffer || !data || len == 0) return 0;
-    if (buffer->full) return 0;
-    uint16_t valid_len = (len < buffer->len) ? len : buffer->len;
-    for (uint16_t i = 0; i < valid_len; i++) {
-        buffer->raw[buffer->head][i] = data[i];
+uint16_t queueWrite(Queue* queue, const uint8_t* data, uint16_t slot_len) {
+    if (!queue || !data || slot_len == 0) return 0;
+    if (queue->full) return 0;
+    uint16_t valid_slot_len = (slot_len < queue->slot_len) ? slot_len : queue->slot_len;
+    for (uint16_t i = 0; i < valid_slot_len; i++) {
+        queue->slots[queue->head][i] = data[i];
     }
-    buffer->used[buffer->head] = valid_len;
-    buffer->head = (uint16_t)((buffer->head + 1) % buffer->arr_size);
-    if (buffer->head == buffer->tail) {
-        buffer->full = true;
+    queue->msg_len[queue->head] = valid_slot_len;
+    queue->head = (uint16_t)((queue->head + 1) % queue->slot_cnt);
+    if (queue->head == queue->tail) {
+        queue->full = true;
     }
-    return valid_len;
+    return valid_slot_len;
 }
 
-uint16_t arrBufferRead(ArrBuffer* buffer, uint8_t* data, uint16_t len) {
-    if (!buffer || !data || arrBufferIsEmpty(buffer)) return 0;
-    if (buffer->used[buffer->tail] < len) {
-        len = buffer->used[buffer->tail];
+uint16_t queueRead(Queue* queue, uint8_t* data, uint16_t slot_len) {
+    if (!queue || !data || queueIsEmpty(queue)) return 0;
+    if (queue->msg_len[queue->tail] < slot_len) {
+        slot_len = queue->msg_len[queue->tail];
     }
-    for (uint16_t i = 0; i < len; i++) {
-        data[i] = buffer->raw[buffer->tail][i];
+    for (uint16_t i = 0; i < slot_len; i++) {
+        data[i] = queue->slots[queue->tail][i];
     }
-    buffer->used[buffer->tail] = 0;
-    buffer->tail = (uint16_t)((buffer->tail + 1) % buffer->arr_size);
+    queue->msg_len[queue->tail] = 0;
+    queue->tail = (uint16_t)((queue->tail + 1) % queue->slot_cnt);
 
-    buffer->full = false;
-    return len;
+    queue->full = false;
+    return slot_len;
 }
