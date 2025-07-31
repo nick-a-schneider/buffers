@@ -14,11 +14,22 @@ if(NOT TARGET test_utils)
     message(FATAL_ERROR "Failed to fetch test_utils")
 endif()
 
-add_executable(test_queue test_queue.c)
-target_link_libraries(test_queue PRIVATE 
-    buffers
-    bitmap_allocator
-    test_utils
+set(TEST_SOURCES
+    queue.c
+    buffer.c
 )
 
-add_test(NAME queue_test COMMAND test_buffers)
+foreach(test_src IN LISTS TEST_SOURCES)
+    # Strip extension and prefix with "test_"
+    get_filename_component(test_name ${test_src} NAME_WE)  
+    set(exe_name "test_${test_name}")
+
+    add_executable(${exe_name} ${exe_name}.c)
+    target_link_libraries(${exe_name} PRIVATE
+        buffers
+        bitmap_allocator
+        test_utils
+    )
+
+    add_test(NAME ${test_name} COMMAND ${exe_name})
+endforeach()

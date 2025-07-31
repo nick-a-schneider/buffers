@@ -21,6 +21,7 @@ endif()
 
 add_library(buffers STATIC 
     src/queue.c
+    src/buffer.c
 )
 
 target_link_libraries(buffers PUBLIC

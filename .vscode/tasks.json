@@ -26,12 +26,22 @@
         },
         
         {
-            "label": "Run Array Buffer Unit Tests",
+            "label": "Run Queue Unit Tests",
             "type": "shell",
             "options": {
                 "cwd": "${workspaceFolder}/build/test"
             },
             "command": "./test_queue",
+            "icon": { "id": "run" },
+        },
+        
+        {
+            "label": "Run Buffer Unit Tests",
+            "type": "shell",
+            "options": {
+                "cwd": "${workspaceFolder}/build/test"
+            },
+            "command": "./test_buffer",
             "icon": { "id": "run" },
         }
     ]
