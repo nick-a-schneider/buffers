@@ -43,6 +43,16 @@
             },
             "command": "./test_buffer",
             "icon": { "id": "run" },
+        },
+        
+        {
+            "label": "Run Stack Unit Tests",
+            "type": "shell",
+            "options": {
+                "cwd": "${workspaceFolder}/build/test"
+            },
+            "command": "./test_stack",
+            "icon": { "id": "run" },
         }
     ]
 }

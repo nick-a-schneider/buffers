@@ -17,6 +17,7 @@ endif()
 set(TEST_SOURCES
     queue.c
     buffer.c
+    stack.c
 )
 
 foreach(test_src IN LISTS TEST_SOURCES)

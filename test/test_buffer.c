@@ -5,12 +5,6 @@
 
 #define MEMORY_SIZE 2048
 
-typedef struct {
-    bool flag;
-    uint64_t data;
-    uint32_t* ptr;
-} TestStruct;
-
 uint8_t testMemory[MEMORY_SIZE];
 static Allocator testAllocator;
 
