@@ -3,7 +3,8 @@
 #include "test_utils.h"
 #include <string.h>
 
-uint8_t testMemory[2048];
+#define MEMORY_SIZE 2048
+uint8_t testMemory[MEMORY_SIZE];
 static Allocator testAllocator;
 
 void test_arrBufferAllocate() {
@@ -222,7 +223,7 @@ void test_arrBufferFill() {
 
 int main() {
     LOG_INFO("ARRAY BUFFER TESTS\n");
-    initAllocator(&testAllocator, 4, testMemory, sizeof(testMemory));
+    initAllocator(&testAllocator, 4, testMemory, MEMORY_SIZE);
     TEST_EVAL(test_arrBufferAllocate);
     TEST_EVAL(test_arrBufferDeallocate);
     TEST_EVAL(test_arrBufferClear);

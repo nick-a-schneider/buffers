@@ -23,6 +23,16 @@
                 "--verbose"
             ],
             "icon": { "id": "gear" },
+        },
+        
+        {
+            "label": "Run Array Buffer Unit Tests",
+            "type": "shell",
+            "options": {
+                "cwd": "${workspaceFolder}/build/test"
+            },
+            "command": "./test_arr_buffer",
+            "icon": { "id": "run" },
         }
     ]
 }
