@@ -33,8 +33,8 @@ bool bufferDeallocate(Allocator* allocator, Buffer** buffer) {
     if (!allocator) return false;
     if (!buffer || !(*buffer)) return false;
     bool res = true;
-    res = deallocate(allocator, (*buffer)->raw);
-    res = deallocate(allocator, *buffer);
+    res &= deallocate(allocator, (*buffer)->raw);
+    res &= deallocate(allocator, *buffer);
      if (res) *buffer = NULL;
     return res;
 }

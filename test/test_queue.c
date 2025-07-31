@@ -11,11 +11,11 @@ void test_queueAllocate() {
     TEST_CASE("Allocates and initializes buffer correctly") {
         Queue* buf = queueAllocate(&testAllocator, 8, 4);
         ASSERT_NOT_NULL(buf, "Buffer should not be NULL");
-        ASSERT_NOT_NULL(buf->slots, "slots pointer should not be NULL");
+        ASSERT_NOT_NULL(buf->slot_buffer, "slot_buffer should not be NULL");
         ASSERT_NOT_NULL(buf->msg_len, "msg_len pointer should not be NULL");
         ASSERT_EQUAL_INT(buf->slot_len, 8, "slot_len mismatch");
-        ASSERT_EQUAL_INT(buf->slot_cnt, 4, "slot_cnt mismatch");
-        ASSERT_FALSE(buf->full, "should not be full on init");
+        ASSERT_EQUAL_INT(buf->slot_buffer->size, 4, "slot_cnt mismatch");
+        ASSERT_FALSE(buf->slot_buffer->full, "should not be full on init");
         for (int i = 0; i < 4; ++i) ASSERT_EQUAL_INT(buf->msg_len[i], 0, "msg_len[i] should be 0 on init");
         memset(testMemory, 0, sizeof(testMemory));
     } CASE_COMPLETE;
@@ -67,20 +67,22 @@ void test_queueDeallocate() {
 }
 
 void test_queueClear() {
-    TEST_CASE("Clears head/tail/full and msg_len array") {
+    TEST_CASE("Clears msg_len array") {
         Queue* buf = queueAllocate(&testAllocator, 8, 4);
-        buf->head = 2; buf->tail = 1; buf->full = true;
+        buf->slot_buffer->head = 2;
+        buf->slot_buffer->tail = 1;
+        buf->slot_buffer->full = true;
         for (int i = 0; i < 4; ++i) buf->msg_len[i] = 4;
-        uint8_t* slots = buf->slots;
+        uint8_t* raw = (uint8_t*)buf->slot_buffer->raw;
         queueClear(buf);
-        ASSERT_EQUAL_INT(buf->head, 0, "head not reset");
-        ASSERT_EQUAL_INT(buf->tail, 0, "tail not reset");
-        ASSERT_FALSE(buf->full, "full not reset");
+        ASSERT_EQUAL_INT(buf->slot_buffer->head, 0, "head not reset");
+        ASSERT_EQUAL_INT(buf->slot_buffer->tail, 0, "tail not reset");
+        ASSERT_FALSE(buf->slot_buffer->full, "full not reset");
         for (int i = 0; i < 4; ++i)
             ASSERT_EQUAL_INT(buf->msg_len[i], 0, "msg_len[i] not cleared");
-        ASSERT_EQUAL_PTR(slots, buf->slots, "raw pointer reset on clear");
+        ASSERT_EQUAL_PTR(raw, (uint8_t*)buf->slot_buffer->raw, "slot_buffer reset on clear");
         ASSERT_EQUAL_INT(buf->slot_len, 8, "size reset on clear");
-        ASSERT_EQUAL_INT(buf->slot_cnt, 4, "size reset on clear");
+        ASSERT_EQUAL_INT(buf->slot_buffer->size, 4, "size reset on clear");
         queueDeallocate(&testAllocator, &buf);
     } CASE_COMPLETE;
 }
@@ -93,10 +95,11 @@ void test_queueWrite() {
         ASSERT_EQUAL_INT(written, 8, "Expected to write 8 bytes");
         ASSERT_FALSE(queueIsEmpty(buf), "Buffer shouldn't be empty after write");
         ASSERT_FALSE(queueIsFull(buf), "Buffer shouldn't be full yet");
-        ASSERT_EQUAL_INT(buf->head, 1, "Head did not move after write");
-        ASSERT_EQUAL_INT(buf->tail, 0, "Tail moved after write");
+        ASSERT_EQUAL_INT(buf->slot_buffer->head, 1, "Head did not move after write");
+        ASSERT_EQUAL_INT(buf->slot_buffer->tail, 0, "Tail moved after write");
         ASSERT_EQUAL_INT(buf->msg_len[0], 8, "Expected to write 8 bytes");
-        ASSERT_EQUAL_STR(buf->slots[0], input, 8, "Written data mismatch");
+        uint8_t* raw = (uint8_t*)buf->slot_buffer->raw;
+        ASSERT_EQUAL_STR(raw, input, 8, "Written data mismatch");
         queueDeallocate(&testAllocator, &buf);
     } CASE_COMPLETE;
 
@@ -105,9 +108,10 @@ void test_queueWrite() {
         Queue* buf = queueAllocate(&testAllocator, 4, 2);
         uint8_t* input = "SwampWho";
         uint16_t written = queueWrite(buf, input, 8);
+        uint8_t* raw = (uint8_t*)buf->slot_buffer->raw;
         ASSERT_EQUAL_INT(written, 4, "Expected to write 4 bytes");
-        ASSERT_EQUAL_STR(buf->slots[0], input, 4, "Written data mismatch");
-        ASSERT_NOT_EQUAL_STR(buf->slots[0], input, 8, "written data overflowed");
+        ASSERT_EQUAL_STR(raw, input, 4, "Written data mismatch");
+        ASSERT_NOT_EQUAL_STR(raw, input, 8, "written data overflowed");
         queueDeallocate(&testAllocator, &buf);
     }  CASE_COMPLETE;
 
@@ -146,10 +150,10 @@ void test_queueRead() {
         ASSERT_EQUAL_STR(output, input, 8, "Read data mismatch");
         ASSERT_TRUE(queueIsEmpty(buf), "Buffer should be empty after read");
         ASSERT_FALSE(queueIsFull(buf), "Buffer shouldn't be full yet");
-        ASSERT_EQUAL_INT(buf->head, 1, "Head moved after read");
-        ASSERT_EQUAL_INT(buf->tail, 1, "Tail did not move after read");
+        ASSERT_EQUAL_INT(buf->slot_buffer->head, 1, "Head moved after read");
+        ASSERT_EQUAL_INT(buf->slot_buffer->tail, 1, "Tail did not move after read");
         ASSERT_EQUAL_INT(buf->msg_len[0], 0, "msg_len was not reset after read");
-        
+
         queueDeallocate(&testAllocator, &buf);
     } CASE_COMPLETE;
 
@@ -206,7 +210,8 @@ void test_QueueFill() {
     TEST_CASE( "test write to full buffer") {
         uint16_t written3 = queueWrite(buf, input3, 6);
         ASSERT_EQUAL_INT(written3, 0, "Expected to not write anything");
-        ASSERT_EQUAL_STR(buf->slots[0], input1, 5, "write to full buffer should not overwrite previous data");
+        uint8_t* raw = (uint8_t*)buf->slot_buffer->raw;
+        ASSERT_EQUAL_STR(raw, input1, 5, "write to full buffer should not overwrite previous data");
     } CASE_COMPLETE;
 
     TEST_CASE("test read from full buffer") {
@@ -219,7 +224,8 @@ void test_QueueFill() {
     TEST_CASE( "test write over after full") {
         uint16_t written3 = queueWrite(buf, input3, 6);
         ASSERT_EQUAL_INT(written3, 6, "Expected to not write anything");
-        ASSERT_EQUAL_STR(buf->slots[0], input3, 6, "write to full buffer should not overwrite previous data");
+        uint8_t* raw = (uint8_t*)buf->slot_buffer->raw;
+        ASSERT_EQUAL_STR(raw, input3, 6, "write to full buffer should not overwrite previous data");
     } CASE_COMPLETE;
 
     queueDeallocate(&testAllocator, &buf);
