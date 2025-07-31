@@ -50,7 +50,7 @@ bool queueDeallocate(Allocator* allocator, Queue** queue) {
     res = deallocate(allocator, (*queue)->msg_len);
     res = deallocate(allocator, (*queue)->slots);
     res = deallocate(allocator, *queue);
-    *queue = NULL;
+    if (res) *queue = NULL;
     return res;
 }
 

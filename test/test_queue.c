@@ -71,12 +71,16 @@ void test_queueClear() {
         Queue* buf = queueAllocate(&testAllocator, 8, 4);
         buf->head = 2; buf->tail = 1; buf->full = true;
         for (int i = 0; i < 4; ++i) buf->msg_len[i] = 4;
+        uint8_t* slots = buf->slots;
         queueClear(buf);
         ASSERT_EQUAL_INT(buf->head, 0, "head not reset");
         ASSERT_EQUAL_INT(buf->tail, 0, "tail not reset");
         ASSERT_FALSE(buf->full, "full not reset");
         for (int i = 0; i < 4; ++i)
             ASSERT_EQUAL_INT(buf->msg_len[i], 0, "msg_len[i] not cleared");
+        ASSERT_EQUAL_PTR(slots, buf->slots, "raw pointer reset on clear");
+        ASSERT_EQUAL_INT(buf->slot_len, 8, "size reset on clear");
+        ASSERT_EQUAL_INT(buf->slot_cnt, 4, "size reset on clear");
         queueDeallocate(&testAllocator, &buf);
     } CASE_COMPLETE;
 }
