@@ -5,16 +5,22 @@ option(BUILD_TESTS "Build unit tests" OFF)
 project(buffers C)
 
 include(FetchContent)
-message(STATUS "Fetching bitmap_allocator...")
-FetchContent_Declare(
-    bitmap_allocator
-    GIT_REPOSITORY https://github.com/nick-a-schneider/bitmap_allocator.git
-    GIT_TAG master
-)
-FetchContent_MakeAvailable(bitmap_allocator)
+if(NOT TARGET bitmap_allocator)
+    message(STATUS "Fetching bitmap_allocator...")
+    FetchContent_Declare(
+        bitmap_allocator
+        GIT_REPOSITORY https://github.com/nick-a-schneider/bitmap_allocator.git
+        GIT_TAG master
+    )
+    FetchContent_MakeAvailable(bitmap_allocator)
+endif()
+
+if(NOT TARGET bitmap_allocator)
+    message(FATAL_ERROR "Failed to fetch bitmap_allocator")
+endif()
 
 add_library(buffers STATIC 
-    src/arr_buffer.c
+    src/queue.c
 )
 
 target_link_libraries(buffers PUBLIC

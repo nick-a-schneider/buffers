@@ -31,7 +31,7 @@
             "options": {
                 "cwd": "${workspaceFolder}/build/test"
             },
-            "command": "./test_arr_buffer",
+            "command": "./test_queue",
             "icon": { "id": "run" },
         }
     ]

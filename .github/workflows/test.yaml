@@ -26,5 +26,5 @@ jobs:
       run: cmake --build build --verbose
 
     - name: Run Unit Tests
-      run: cd build/test/ && ./test_arr_buffer
+      run: cd build/test/ && ./test_queue
 

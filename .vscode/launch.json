@@ -2,10 +2,10 @@
     "version": "0.2.0",
     "configurations": [
         {
-            "name": "Debug [arr_buffer] Unit Tests",
+            "name": "Debug [queue] Unit Tests",
             "type": "cppdbg",
             "request": "launch",
-            "program": "${workspaceFolder}/build/test/test_arr_buffer",
+            "program": "${workspaceFolder}/build/test/test_queue",
             "args": [],
             "stopAtEntry": true,
             "cwd": "${workspaceFolder}",
