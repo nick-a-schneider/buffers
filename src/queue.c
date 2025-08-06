@@ -29,9 +29,9 @@ int queueDeallocate(BlockAllocator* allocator, Queue** queue) {
     res1 = bufferDeallocate(allocator, (&(*queue)->slot_buffer));
     res2 = blockDeallocate(allocator, (*queue)->msg_len);
     res3 = blockDeallocate(allocator, *queue);
-    if (res1 != QUEUE_OK) return res1;
-    if (res2 != QUEUE_OK) return res2;
-    if (res3 != QUEUE_OK) return res3;
+    if (res1 != BLOCK_ALLOCATOR_OK) return res1;
+    if (res2 != BLOCK_ALLOCATOR_OK) return res2;
+    if (res3 != BLOCK_ALLOCATOR_OK) return res3;
     *queue = NULL;
     return QUEUE_OK;
 }

@@ -49,7 +49,7 @@ void test_queueDeallocate() {
         int res = queueDeallocate(&testAllocator, &buf);
         ASSERT_EQUAL_INT(res, QUEUE_OK, "Buffer deallocation failed");
         ASSERT_NULL(buf, "Buffer pointer should be NULL after free");
-    } CASE_KNOWN_ISSUE;
+    } CASE_COMPLETE;
 
     TEST_CASE("invalid allocator") {
         BlockAllocator* invalidAllocator = NULL;
@@ -57,13 +57,13 @@ void test_queueDeallocate() {
         int res = queueDeallocate(invalidAllocator, &buf);
         ASSERT_EQUAL_INT(res, -EINVAL, "Deallocating NULL buffer should fail");
         memset(testMemory, 0, sizeof(testMemory));
-    } CASE_KNOWN_ISSUE;
+    } CASE_COMPLETE;
 
     TEST_CASE("Null buffer pointer") {
         Queue* buf = NULL;
         int res = queueDeallocate(&testAllocator, &buf);
         ASSERT_EQUAL_INT(res, -EINVAL, "Deallocating NULL buffer should fail");
-    } CASE_KNOWN_ISSUE;
+    } CASE_COMPLETE;
 
 }
 

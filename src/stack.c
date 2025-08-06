@@ -17,7 +17,7 @@ Stack* stackAllocate(BlockAllocator* allocator, uint16_t size, uint16_t type_siz
     if (!stack) return NULL;
     stack->raw = blockAllocate(allocator, size * type_size);
     if (!stack->raw) {
-        blockDeallocate(allocator, stack);
+        (void)blockDeallocate(allocator, stack);
         return NULL;
     }
     stack->type_size = type_size;
@@ -29,11 +29,11 @@ Stack* stackAllocate(BlockAllocator* allocator, uint16_t size, uint16_t type_siz
 
 int stackDeallocate(BlockAllocator* allocator, Stack** stack) {
     if (!allocator || !stack || !(*stack)) return -EINVAL;
-    int res1, res2 = STACK_OK;
+    int res1, res2;
     res1 = blockDeallocate(allocator, (*stack)->raw);
     res2 = blockDeallocate(allocator, *stack);
-    if (res1 != STACK_OK) return res1;
-    if (res2 != STACK_OK) return res2;
+    if (res1 != BLOCK_ALLOCATOR_OK) return res1;
+    if (res2 != BLOCK_ALLOCATOR_OK) return res2;
     *stack = NULL;
     return STACK_OK;
 }

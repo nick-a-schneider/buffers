@@ -35,8 +35,8 @@ int bufferDeallocate(BlockAllocator* allocator, Buffer** buffer) {
     int res1, res2;
     res1 = blockDeallocate(allocator, (*buffer)->raw);
     res2 = blockDeallocate(allocator, *buffer);
-    if (res1 != BUFFER_OK) return res1;
-    if (res2 != BUFFER_OK) return res2;
+    if (res1 != BLOCK_ALLOCATOR_OK) return res1;
+    if (res2 != BLOCK_ALLOCATOR_OK) return res2;
     *buffer = NULL;
     return BUFFER_OK;
 }
