@@ -52,20 +52,20 @@ void test_bufferDeallocate() {
         int res = bufferDeallocate(&testAllocator, &buf);
         ASSERT_EQUAL_INT(res, BUFFER_OK, "Buffer deallocation failed");
         ASSERT_NULL(buf, "Buffer pointer should be NULL after free");
-    } CASE_NOT_IMPLEMENTED;
+    } CASE_KNOWN_ISSUE;
 
     TEST_CASE("invalid allocator") {
         BlockAllocator* invalidAllocator = NULL;
         Buffer* buf = bufferAllocate(&testAllocator, 8, sizeof(uint8_t));
         int res = bufferDeallocate(invalidAllocator, &buf);
         ASSERT_EQUAL_INT(res, -EINVAL, "Deallocating NULL buffer should fail");
-    } CASE_NOT_IMPLEMENTED;
+    } CASE_KNOWN_ISSUE;
 
     TEST_CASE("Null buffer pointer") {
         Buffer* buf = NULL;
         int res = bufferDeallocate(&testAllocator, &buf);
         ASSERT_EQUAL_INT(res, -EINVAL, "Deallocating NULL buffer should fail");
-    } CASE_NOT_IMPLEMENTED;
+    } CASE_KNOWN_ISSUE;
     
     memset(testMemory, 0, sizeof(testMemory));
 }

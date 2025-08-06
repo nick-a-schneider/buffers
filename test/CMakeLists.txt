@@ -19,7 +19,7 @@ set(TEST_SOURCES
     buffer.c
     stack.c
 )
-
+add_compile_definitions(DEBUG=1)
 foreach(test_src IN LISTS TEST_SOURCES)
     # Strip extension and prefix with "test_"
     get_filename_component(test_name ${test_src} NAME_WE)  

@@ -38,7 +38,7 @@ void test_stackDeallocate() {
         int res = stackDeallocate(&testAllocator, &stack);
         ASSERT_EQUAL_INT(res, STACK_OK, "Buffer deallocation failed");
         ASSERT_NULL(stack, "Buffer pointer should be NULL after free");
-    } CASE_NOT_IMPLEMENTED;
+    } CASE_KNOWN_ISSUE;
 
     TEST_CASE("invalid allocator") {
         BlockAllocator* invalidAllocator = NULL;
@@ -46,13 +46,13 @@ void test_stackDeallocate() {
         int res = stackDeallocate(invalidAllocator, &stack);
         ASSERT_EQUAL_INT(res, -EINVAL, "Deallocating NULL stack should fail");
         memset(testMemory, 0, sizeof(testMemory));
-    } CASE_NOT_IMPLEMENTED;
+    } CASE_KNOWN_ISSUE;
 
     TEST_CASE("Null stack pointer") {
         Stack* stack = NULL;
         int res = stackDeallocate(&testAllocator, &stack);
         ASSERT_EQUAL_INT(res, -EINVAL, "Deallocating NULL stack should fail");
-    } CASE_NOT_IMPLEMENTED;
+    } CASE_KNOWN_ISSUE;
 }
 
 void test_stackClear() {
