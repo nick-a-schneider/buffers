@@ -1,5 +1,5 @@
 #include "buffer.h"
-#include "allocator.h"
+#include "block_allocator.h"
 #include <stdint.h>
 #include <stdbool.h>
 
@@ -9,16 +9,16 @@ static inline void memcpy(void *dest, const void *src, uint16_t size) {
     }
 }
 
-Buffer* bufferAllocate(Allocator* allocator, uint16_t size, uint16_t type_size) {
+Buffer* bufferAllocate(BlockAllocator* allocator, uint16_t size, uint16_t type_size) {
     if (!allocator) return NULL;
     if (size == 0 || type_size == 0) return NULL;
-    Buffer* buf = (Buffer*)allocate(allocator, sizeof(Buffer));
+    Buffer* buf = (Buffer*)blockAllocate(allocator, sizeof(Buffer));
     if (!buf) {
         return NULL; // Allocation failed
     }
-    buf->raw = allocate(allocator, size * type_size);
+    buf->raw = blockAllocate(allocator, size * type_size);
     if (!(buf->raw)) {
-        deallocate(allocator, buf);
+        blockDeallocate(allocator, buf);
         return NULL; // Allocation failed
     }
     buf->size = size;
@@ -29,12 +29,12 @@ Buffer* bufferAllocate(Allocator* allocator, uint16_t size, uint16_t type_size) 
     return buf;
 }
 
-bool bufferDeallocate(Allocator* allocator, Buffer** buffer) {
+bool bufferDeallocate(BlockAllocator* allocator, Buffer** buffer) {
     if (!allocator) return false;
     if (!buffer || !(*buffer)) return false;
     bool res = true;
-    res &= deallocate(allocator, (*buffer)->raw);
-    res &= deallocate(allocator, *buffer);
+    res &= blockDeallocate(allocator, (*buffer)->raw);
+    res &= blockDeallocate(allocator, *buffer);
      if (res) *buffer = NULL;
     return res;
 }

@@ -1,16 +1,22 @@
 #include "stack.h"
-#include "allocator.h"
+#include "block_allocator.h"
 #include <stdint.h>
 #include <stdbool.h>
 
-Stack* stackAllocate(Allocator* allocator, uint16_t size, uint16_t type_size) {
+static inline void memcpy(void *dest, const void *src, uint16_t size) {
+    for (uint16_t i = 0; i < size; ++i) {
+        ((uint8_t*)dest)[i] = ((uint8_t*)src)[i];
+    }
+}
+
+Stack* stackAllocate(BlockAllocator* allocator, uint16_t size, uint16_t type_size) {
     if (!allocator) return NULL;
     if (size == 0 || type_size == 0) return NULL;
-    Stack* stack = (Stack*)allocate(allocator, sizeof(Stack));
+    Stack* stack = (Stack*)blockAllocate(allocator, sizeof(Stack));
     if (!stack) return NULL;
-    stack->raw = allocate(allocator, size * type_size);
+    stack->raw = blockAllocate(allocator, size * type_size);
     if (!stack->raw) {
-        deallocate(allocator, stack);
+        blockDeallocate(allocator, stack);
         return NULL;
     }
     stack->type_size = type_size;
@@ -20,12 +26,12 @@ Stack* stackAllocate(Allocator* allocator, uint16_t size, uint16_t type_size) {
     return stack;
 }
 
-bool stackDeallocate(Allocator* allocator, Stack** stack) {
+bool stackDeallocate(BlockAllocator* allocator, Stack** stack) {
     if (!allocator) return false;
     if (!stack || !(*stack)) return false;
     bool res = true;
-    res &= deallocate(allocator, (*stack)->raw);
-    res &= deallocate(allocator, *stack);
+    res &= blockDeallocate(allocator, (*stack)->raw);
+    res &= blockDeallocate(allocator, *stack);
     if (res) *stack = NULL;
     return res;
 }

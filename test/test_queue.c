@@ -1,11 +1,11 @@
 #include "queue.h"
-#include "allocator.h"
+#include "block_allocator.h"
 #include "test_utils.h"
 #include <string.h>
 
 #define MEMORY_SIZE 2048
 uint8_t testMemory[MEMORY_SIZE];
-static Allocator testAllocator;
+static BlockAllocator testAllocator;
 
 void test_queueAllocate() {
     TEST_CASE("Allocates and initializes buffer correctly") {
@@ -27,7 +27,7 @@ void test_queueAllocate() {
     } CASE_COMPLETE;
 
     TEST_CASE("invalid allocator") {
-        Allocator* invalidAllocator = NULL;
+        BlockAllocator* invalidAllocator = NULL;
         Queue* buf = queueAllocate(invalidAllocator, 2, 2);
         ASSERT_NULL(buf, "should return NULL on invalid allocator");
         memset(testMemory, 0, sizeof(testMemory));
@@ -51,7 +51,7 @@ void test_queueDeallocate() {
     } CASE_COMPLETE;
 
     TEST_CASE("invalid allocator") {
-        Allocator* invalidAllocator = NULL;
+        BlockAllocator* invalidAllocator = NULL;
         Queue* buf = queueAllocate(&testAllocator, 8, 4);
         bool success = queueDeallocate(invalidAllocator, &buf);
         ASSERT_FALSE(success, "Deallocating NULL buffer should fail");
@@ -233,7 +233,7 @@ void test_QueueFill() {
 
 int main() {
     LOG_INFO("QUEUE TESTS\n");
-    initAllocator(&testAllocator, 4, testMemory, MEMORY_SIZE);
+    initBlockAllocator(&testAllocator, 4, testMemory, MEMORY_SIZE);
     TEST_EVAL(test_queueAllocate);
     TEST_EVAL(test_queueDeallocate);
     TEST_EVAL(test_queueClear);

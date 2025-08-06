@@ -1,35 +1,35 @@
 #include "queue.h"
-
-#include "allocator.h"
+#include "buffer.h"
+#include "block_allocator.h"
 #include <stdio.h>
 
-Queue* queueAllocate(Allocator* allocator, uint16_t slot_len, uint16_t size) {
+Queue* queueAllocate(BlockAllocator* allocator, uint16_t slot_len, uint16_t size) {
     if (!allocator) return NULL;
     if (slot_len == 0 || size == 0) return NULL;
-    Queue* queue = (Queue*)allocate(allocator, sizeof(Queue));
+    Queue* queue = (Queue*)blockAllocate(allocator, sizeof(Queue));
     if (!queue) return NULL;
     queue->slot_buffer = bufferAllocate(allocator, size, slot_len * sizeof(uint8_t));
     if (!(queue->slot_buffer)) {
-        (void)deallocate(allocator, queue);
+        (void)blockDeallocate(allocator, queue);
         return NULL;
     }
-    queue->msg_len = (uint16_t*)allocate(allocator, size * sizeof(uint16_t));
+    queue->msg_len = (uint16_t*)blockAllocate(allocator, size * sizeof(uint16_t));
     if (!(queue->msg_len)) {
-        (void)bufferDeallocate(allocator, queue->slot_buffer);
-        (void)deallocate(allocator, queue);
+        (void)bufferDeallocate(allocator, &queue->slot_buffer);
+        (void)blockDeallocate(allocator, queue);
         return NULL;
     }
     queue->slot_len = slot_len;
     return queue;
 }
 
-bool queueDeallocate(Allocator* allocator, Queue** queue) {
+bool queueDeallocate(BlockAllocator* allocator, Queue** queue) {
     if (!allocator) return false;
     if (!queue || !(*queue)) return false;
     bool res = true;
     res &= bufferDeallocate(allocator, (&(*queue)->slot_buffer));
-    res &= deallocate(allocator, (*queue)->msg_len);
-    res &= deallocate(allocator, *queue);
+    res &= blockDeallocate(allocator, (*queue)->msg_len);
+    res &= blockDeallocate(allocator, *queue);
     if (res) *queue = NULL;
     return res;
 }

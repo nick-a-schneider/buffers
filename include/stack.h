@@ -1,4 +1,4 @@
-#include "allocator.h"
+#include "block_allocator.h"
 #include <stdint.h>
 #include <stdbool.h>
 
@@ -10,9 +10,9 @@ typedef struct {
     void* raw;
 } Stack;
 
-Stack* stackAllocate(Allocator* allocator, uint16_t size, uint16_t type_size);
+Stack* stackAllocate(BlockAllocator* allocator, uint16_t size, uint16_t type_size);
 
-bool stackDeallocate(Allocator* allocator, Stack** stack);
+bool stackDeallocate(BlockAllocator* allocator, Stack** stack);
 
 void stackClear(Stack* stack);
 

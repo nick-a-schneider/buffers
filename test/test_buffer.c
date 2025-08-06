@@ -1,12 +1,12 @@
 #include "buffer.h"
-#include "allocator.h"
+#include "block_allocator.h"
 #include "test_utils.h"
 #include <string.h>
 
 #define MEMORY_SIZE 2048
 
 uint8_t testMemory[MEMORY_SIZE];
-static Allocator testAllocator;
+static BlockAllocator testAllocator;
 
 void test_bufferAllocate() {
     TEST_CASE("Allocates and initializes buffer correctly") {
@@ -37,7 +37,7 @@ void test_bufferAllocate() {
     } CASE_COMPLETE;
 
     TEST_CASE("invalid allocator") {
-        Allocator* invalidAllocator = NULL;
+        BlockAllocator* invalidAllocator = NULL;
         Buffer* buf = bufferAllocate(invalidAllocator, 8, sizeof(uint8_t));
         ASSERT_NULL(buf, "should return NULL on invalid allocator");
     } CASE_COMPLETE;
@@ -54,7 +54,7 @@ void test_bufferDeallocate() {
     } CASE_COMPLETE;
 
     TEST_CASE("invalid allocator") {
-        Allocator* invalidAllocator = NULL;
+        BlockAllocator* invalidAllocator = NULL;
         Buffer* buf = bufferAllocate(&testAllocator, 8, sizeof(uint8_t));
         bool success = bufferDeallocate(invalidAllocator, &buf);
         ASSERT_FALSE(success, "Deallocating NULL buffer should fail");
@@ -219,7 +219,7 @@ void test_BufferFill() {
 
 int main() {
     LOG_INFO("BUFFER TESTS\n");
-    initAllocator(&testAllocator, 4, testMemory, MEMORY_SIZE);
+    initBlockAllocator(&testAllocator, 4, testMemory, MEMORY_SIZE);
     TEST_EVAL(test_bufferAllocate);
     TEST_EVAL(test_bufferDeallocate);
     TEST_EVAL(test_bufferClear);

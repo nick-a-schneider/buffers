@@ -1,11 +1,11 @@
 #include "stack.h"
-#include "allocator.h"
+#include "block_allocator.h"
 #include "test_utils.h"
 #include <string.h>
 
 #define MEMORY_SIZE 2048
 uint8_t testMemory[MEMORY_SIZE];
-static Allocator testAllocator;
+static BlockAllocator testAllocator;
 
 void test_stackAllocate() {
     TEST_CASE("Allocates and initializes stack correctly") {
@@ -40,7 +40,7 @@ void test_stackDeallocate() {
     } CASE_COMPLETE;
 
     TEST_CASE("invalid allocator") {
-        Allocator* invalidAllocator = NULL;
+        BlockAllocator* invalidAllocator = NULL;
         Stack* stack = stackAllocate(&testAllocator, 8, sizeof(uint16_t));
         bool res = stackDeallocate(invalidAllocator, &stack);
         ASSERT_FALSE(res, "Deallocating NULL stack should fail");
@@ -197,7 +197,7 @@ void test_stackFilled() {
 
 int main() {
     LOG_INFO("STACK TESTS\n");
-    initAllocator(&testAllocator, 4, testMemory, MEMORY_SIZE);
+    initBlockAllocator(&testAllocator, 4, testMemory, MEMORY_SIZE);
     TEST_EVAL(test_stackAllocate);
     TEST_EVAL(test_stackDeallocate);
     TEST_EVAL(test_stackClear);

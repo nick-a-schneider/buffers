@@ -1,6 +1,6 @@
 #pragma once
 
-#include "allocator.h"
+#include "block_allocator.h"
 #include "buffer.h"
 #include <stdbool.h>
 #include <stdint.h>
@@ -11,8 +11,8 @@ typedef struct {
     uint16_t slot_len;
 } Queue;
 
-Queue* queueAllocate(Allocator* allocator, uint16_t slot_len, uint16_t size);
-bool queueDeallocate(Allocator* allocator, Queue** queue);
+Queue* queueAllocate(BlockAllocator* allocator, uint16_t slot_len, uint16_t size);
+bool queueDeallocate(BlockAllocator* allocator, Queue** queue);
 
 void queueClear(Queue* queue);
 
