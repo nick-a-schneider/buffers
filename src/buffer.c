@@ -2,6 +2,7 @@
 #include "block_allocator.h"
 #include <stdint.h>
 #include <stdbool.h>
+#include <errno.h>
 
 static inline void memcpy(void *dest, const void *src, uint16_t size) {
     for (uint16_t i = 0; i < size; ++i) {
@@ -29,14 +30,15 @@ Buffer* bufferAllocate(BlockAllocator* allocator, uint16_t size, uint16_t type_s
     return buf;
 }
 
-bool bufferDeallocate(BlockAllocator* allocator, Buffer** buffer) {
-    if (!allocator) return false;
-    if (!buffer || !(*buffer)) return false;
-    bool res = true;
-    res &= blockDeallocate(allocator, (*buffer)->raw);
-    res &= blockDeallocate(allocator, *buffer);
-     if (res) *buffer = NULL;
-    return res;
+int bufferDeallocate(BlockAllocator* allocator, Buffer** buffer) {
+    if (!allocator || !buffer || !(*buffer)) return -EINVAL;
+    int res1, res2;
+    res1 = blockDeallocate(allocator, (*buffer)->raw);
+    res2 = blockDeallocate(allocator, *buffer);
+    if (res1 != BUFFER_OK) return res1;
+    if (res2 != BUFFER_OK) return res2;
+    *buffer = NULL;
+    return BUFFER_OK;
 }
 
 void __bufferMoveTail(Buffer* buffer, uint16_t offset) {
@@ -65,26 +67,24 @@ bool bufferIsFull(const Buffer* buffer) {
     return buffer->full;
 }
 
-bool bufferWrite(Buffer* buffer, const void* data) {
-    if (!buffer) return false;
-    if (!data) return false;
-    if (buffer->full) return false;
+int bufferWrite(Buffer* buffer, const void* data) {
+    if (!buffer || !data) return -EINVAL;
+    if (buffer->full) return -ENOSPC;
     uint8_t* head_addr = (uint8_t*)buffer->raw + (buffer->head * buffer->type_size);
     memcpy((void*)head_addr, data, buffer->type_size);
     __bufferMoveHead(buffer, 1);
     if (buffer->head == buffer->tail) {
         buffer->full = true;
     }
-    return true;
+    return BUFFER_OK;
 }
 
-bool bufferRead(Buffer* buffer, void* data) {
-    if (!buffer) return false;
-    if (!data) return false;
-    if (bufferIsEmpty(buffer)) return false;
+int bufferRead(Buffer* buffer, void* data) {
+    if (!buffer  || !data) return -EINVAL;
+    if (bufferIsEmpty(buffer)) return -EAGAIN;
     uint8_t* tail_addr = (uint8_t*)buffer->raw + (buffer->tail * buffer->type_size);
     memcpy(data, (void*)tail_addr, buffer->type_size);
     __bufferMoveTail(buffer, 1);
     buffer->full = false;
-    return true;
+    return BUFFER_OK;
 }

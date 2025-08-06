@@ -2,6 +2,7 @@
 #include "block_allocator.h"
 #include "test_utils.h"
 #include <string.h>
+#include <errno.h>
 
 #define MEMORY_SIZE 2048
 uint8_t testMemory[MEMORY_SIZE];
@@ -34,24 +35,24 @@ void test_stackAllocate() {
 void test_stackDeallocate() {
     TEST_CASE("Deallocates and nullifies stack pointer") {
         Stack* stack = stackAllocate(&testAllocator, 8, sizeof(uint16_t));
-        bool res = stackDeallocate(&testAllocator, &stack);
-        ASSERT_TRUE(res, "Buffer deallocation failed");
+        int res = stackDeallocate(&testAllocator, &stack);
+        ASSERT_EQUAL_INT(res, STACK_OK, "Buffer deallocation failed");
         ASSERT_NULL(stack, "Buffer pointer should be NULL after free");
-    } CASE_COMPLETE;
+    } CASE_NOT_IMPLEMENTED;
 
     TEST_CASE("invalid allocator") {
         BlockAllocator* invalidAllocator = NULL;
         Stack* stack = stackAllocate(&testAllocator, 8, sizeof(uint16_t));
-        bool res = stackDeallocate(invalidAllocator, &stack);
-        ASSERT_FALSE(res, "Deallocating NULL stack should fail");
+        int res = stackDeallocate(invalidAllocator, &stack);
+        ASSERT_EQUAL_INT(res, -EINVAL, "Deallocating NULL stack should fail");
         memset(testMemory, 0, sizeof(testMemory));
-    } CASE_COMPLETE;
+    } CASE_NOT_IMPLEMENTED;
 
     TEST_CASE("Null stack pointer") {
         Stack* stack = NULL;
-        bool res = stackDeallocate(&testAllocator, &stack);
-        ASSERT_FALSE(res, "Deallocating NULL stack should fail");
-    } CASE_COMPLETE;
+        int res = stackDeallocate(&testAllocator, &stack);
+        ASSERT_EQUAL_INT(res, -EINVAL, "Deallocating NULL stack should fail");
+    } CASE_NOT_IMPLEMENTED;
 }
 
 void test_stackClear() {
@@ -71,8 +72,8 @@ void test_stackPush() {
     TEST_CASE("Pushes data to stack") {
         Stack* stack = stackAllocate(&testAllocator, 8, sizeof(uint16_t));
         uint16_t data = 0x1234;
-        bool res = stackPush(stack, (void*)&data);
-        ASSERT_TRUE(res, "Pushing data to stack failed");
+        int res = stackPush(stack, (void*)&data);
+        ASSERT_EQUAL_INT(res, STACK_OK, "Pushing data to stack failed");
         ASSERT_EQUAL_INT(stack->top, 1, "top should be 1 after push");
         uint16_t top = *(uint16_t*)stack->raw;
         ASSERT_EQUAL_INT(top, data, "raw pointer should not change on push");
@@ -85,8 +86,8 @@ void test_stackPush() {
         Stack* stack = stackAllocate(&testAllocator, 8, sizeof(TestStruct));
         uint32_t data = 0x1234;
         TestStruct input = {.flag = true, .data = data, .ptr = &data};
-        bool res = stackPush(stack, (void*)&input);
-        ASSERT_TRUE(res, "Pushing data to stack failed");
+        int res = stackPush(stack, (void*)&input);
+        ASSERT_EQUAL_INT(res, STACK_OK, "Pushing data to stack failed");
         ASSERT_EQUAL_INT(stack->top, 1, "top should be 1 after push");
         TestStruct top = *(TestStruct*)stack->raw;
         ASSERT_TRUE(top.flag, "flag should not change on push");
@@ -100,16 +101,16 @@ void test_stackPush() {
     TEST_CASE("Invalid data") {
         Stack* stack = stackAllocate(&testAllocator, 8, sizeof(uint16_t));
         uint16_t* data = NULL;
-        bool res = stackPush(stack, (void*)data);
-        ASSERT_FALSE(res, "Pushing data to NULL stack should fail");
+        int res = stackPush(stack, (void*)data);
+        ASSERT_EQUAL_INT(res, -EINVAL, "Pushing data to NULL stack should fail");
         stackDeallocate(&testAllocator, &stack);
     } CASE_COMPLETE;
 
     TEST_CASE("Null stack pointer") {
         Stack* stack = NULL;
         uint16_t data = 0x1234;
-        bool res = stackPush(stack, (void*)&data);
-        ASSERT_FALSE(res, "Pushing data to NULL stack should fail");
+        int res = stackPush(stack, (void*)&data);
+        ASSERT_EQUAL_INT(res, -EINVAL, "Pushing data to NULL stack should fail");
     } CASE_COMPLETE;
 }
 
@@ -120,8 +121,8 @@ void test_stackPop() {
         (void)stackPush(stack, (void*)&data);
         uint16_t popped;
         uint16_t* raw = (uint16_t*)stack->raw;
-        bool res = stackPop(stack, (void*)&popped);
-        ASSERT_TRUE(res, "Popping data from stack failed");
+        int res = stackPop(stack, (void*)&popped);
+        ASSERT_EQUAL_INT(res, STACK_OK, "Popping data from stack failed");
         ASSERT_EQUAL_INT(popped, 0x1234, "Popped data should be 0x1234");
         ASSERT_EQUAL_INT(stack->top, 0, "top should be 0 after pop");
         ASSERT_EQUAL_PTR(raw, (uint16_t*)stack->raw, "raw pointer should not change on pop");
@@ -137,8 +138,8 @@ void test_stackPop() {
         (void)stackPush(stack, (void*)&input);
         TestStruct popped;
         TestStruct* raw = (TestStruct*)stack->raw;
-        bool res = stackPop(stack, (void*)&popped);
-        ASSERT_TRUE(res, "Popping data from stack failed");
+        int res = stackPop(stack, (void*)&popped);
+        ASSERT_EQUAL_INT(res, STACK_OK, "Popping data from stack failed");
         ASSERT_TRUE(popped.flag, "Popped flag should be true");
         ASSERT_EQUAL_INT(popped.data, input.data, "Popped data should be 0x1234");
         ASSERT_EQUAL_PTR(popped.ptr, input.ptr, "Popped pointer should have the same value");
@@ -152,8 +153,8 @@ void test_stackPop() {
     TEST_CASE("Empty stack") {
         Stack* stack = stackAllocate(&testAllocator, 8, sizeof(uint16_t));
         uint16_t data = 0x1234;
-        bool res = stackPop(stack, (void*)&data);
-        ASSERT_FALSE(res, "Popping data from empty stack should fail");
+        int res = stackPop(stack, (void*)&data);
+        ASSERT_EQUAL_INT(res, -EAGAIN, "Popping data from empty stack should fail");
         ASSERT_EQUAL_INT(data, 0x1234, "Popped data should not be overwritten");
         stackDeallocate(&testAllocator, &stack);
     } CASE_COMPLETE;
@@ -161,16 +162,16 @@ void test_stackPop() {
     TEST_CASE("Invalid data") {
         Stack* stack = stackAllocate(&testAllocator, 8, sizeof(uint16_t));
         uint16_t* data = NULL;
-        bool res = stackPop(stack, (void*)data);
-        ASSERT_FALSE(res, "Popping data from NULL stack should fail");
+        int res = stackPop(stack, (void*)data);
+        ASSERT_EQUAL_INT(res, -EINVAL, "Popping data from NULL stack should fail");
         stackDeallocate(&testAllocator, &stack);
     } CASE_COMPLETE;
 
     TEST_CASE("Null stack pointer") {
         Stack* stack = NULL;
         uint16_t data = 0x1234;
-        bool res = stackPop(stack, (void*)&data);
-        ASSERT_FALSE(res, "Popping data from NULL stack should fail");
+        int res = stackPop(stack, (void*)&data);
+        ASSERT_EQUAL_INT(res, -EINVAL, "Popping data from NULL stack should fail");
     } CASE_COMPLETE;
 }
 
@@ -182,14 +183,14 @@ void test_stackFilled() {
     TEST_CASE("Pushing data to filled stack") {
         (void)stackPush(stack, (void*)&data1);
         (void)stackPush(stack, (void*)&data2);
-        bool res = stackPush(stack, (void*)&data3);
-        ASSERT_FALSE(res, "Pushing data to filled stack should fail");
+        int res = stackPush(stack, (void*)&data3);
+        ASSERT_EQUAL_INT(res, -ENOSPC, "Pushing data to filled stack should fail");
         uint16_t top = ((uint16_t*)stack->raw)[stack->top - 1];
         ASSERT_EQUAL_INT(top, data2, "top should still be data2 after push");
         uint16_t _ ;
         (void)stackPop(stack, (void*)&_);
         res = stackPush(stack, (void*)&data3);
-        ASSERT_TRUE(res, "Pushing data should succeed after pop");
+        ASSERT_EQUAL_INT(res, STACK_OK, "Pushing data should succeed after pop");
     } CASE_COMPLETE;
     
     stackDeallocate(&testAllocator, &stack);

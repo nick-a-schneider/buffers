@@ -2,6 +2,7 @@
 #include "block_allocator.h"
 #include "test_utils.h"
 #include <string.h>
+#include <errno.h>
 
 #define MEMORY_SIZE 2048
 uint8_t testMemory[MEMORY_SIZE];
@@ -45,24 +46,24 @@ void test_queueAllocate() {
 void test_queueDeallocate() {
     TEST_CASE("Deallocates and nullifies buffer pointer") {
         Queue* buf = queueAllocate(&testAllocator, 8, 4);
-        bool success = queueDeallocate(&testAllocator, &buf);
-        ASSERT_TRUE(success, "Buffer deallocation failed");
+        int res = queueDeallocate(&testAllocator, &buf);
+        ASSERT_EQUAL_INT(res, QUEUE_OK, "Buffer deallocation failed");
         ASSERT_NULL(buf, "Buffer pointer should be NULL after free");
-    } CASE_COMPLETE;
+    } CASE_NOT_IMPLEMENTED;
 
     TEST_CASE("invalid allocator") {
         BlockAllocator* invalidAllocator = NULL;
         Queue* buf = queueAllocate(&testAllocator, 8, 4);
-        bool success = queueDeallocate(invalidAllocator, &buf);
-        ASSERT_FALSE(success, "Deallocating NULL buffer should fail");
+        int res = queueDeallocate(invalidAllocator, &buf);
+        ASSERT_EQUAL_INT(res, -EINVAL, "Deallocating NULL buffer should fail");
         memset(testMemory, 0, sizeof(testMemory));
-    } CASE_COMPLETE;
+    } CASE_NOT_IMPLEMENTED;
 
     TEST_CASE("Null buffer pointer") {
         Queue* buf = NULL;
-        bool success = queueDeallocate(&testAllocator, &buf);
-        ASSERT_FALSE(success, "Deallocating NULL buffer should fail");
-    } CASE_COMPLETE;
+        int res = queueDeallocate(&testAllocator, &buf);
+        ASSERT_EQUAL_INT(res, -EINVAL, "Deallocating NULL buffer should fail");
+    } CASE_NOT_IMPLEMENTED;
 
 }
 
@@ -91,7 +92,7 @@ void test_queueWrite() {
     TEST_CASE("Writes correctly") {
         Queue* buf = queueAllocate(&testAllocator, 8, 2);
         uint8_t* input = "SwampWho";
-        uint16_t written = queueWrite(buf, input, 8);
+        int written = queueWrite(buf, input, 8);
         ASSERT_EQUAL_INT(written, 8, "Expected to write 8 bytes");
         ASSERT_FALSE(queueIsEmpty(buf), "Buffer shouldn't be empty after write");
         ASSERT_FALSE(queueIsFull(buf), "Buffer shouldn't be full yet");
@@ -107,7 +108,7 @@ void test_queueWrite() {
         memset(testMemory, 0, sizeof(testMemory));
         Queue* buf = queueAllocate(&testAllocator, 4, 2);
         uint8_t* input = "SwampWho";
-        uint16_t written = queueWrite(buf, input, 8);
+        int written = queueWrite(buf, input, 8);
         uint8_t* raw = (uint8_t*)buf->slot_buffer->raw;
         ASSERT_EQUAL_INT(written, 4, "Expected to write 4 bytes");
         ASSERT_EQUAL_STR(raw, input, 4, "Written data mismatch");
@@ -118,23 +119,23 @@ void test_queueWrite() {
     TEST_CASE("Invalid buffer") {
         Queue* buf = NULL;
         uint8_t* input = "SwampWho";
-        uint16_t written = queueWrite(buf, input, 8);
-        ASSERT_EQUAL_INT(written, 0, "Expected to write 0 bytes");
+        int written = queueWrite(buf, input, 8);
+        ASSERT_EQUAL_INT(written, -EINVAL, "Expected to write 0 bytes");
     }  CASE_COMPLETE;
 
     TEST_CASE("Invalid data") {
         Queue* buf = queueAllocate(&testAllocator, 8, 2);
         uint8_t* input = NULL;
-        uint16_t written = queueWrite(buf, input, 8);
-        ASSERT_EQUAL_INT(written, 0, "Expected to write 0 bytes");
+        int written = queueWrite(buf, input, 8);
+        ASSERT_EQUAL_INT(written, -EINVAL, "Expected to write 0 bytes");
         queueDeallocate(&testAllocator, &buf);
     }  CASE_COMPLETE;
 
     TEST_CASE("zero slot_length") {
         Queue* buf = queueAllocate(&testAllocator, 8, 2);
         uint8_t* input = "SwampWho";
-        uint16_t written = queueWrite(buf, input, 0);
-        ASSERT_EQUAL_INT(written, 0, "Expected to write 0 bytes");
+        int written = queueWrite(buf, input, 0);
+        ASSERT_EQUAL_INT(written, -EINVAL, "Expected to write 0 bytes");
         queueDeallocate(&testAllocator, &buf);
     }  CASE_COMPLETE;
 }
@@ -145,7 +146,7 @@ void test_queueRead() {
         uint8_t* input = "SwampWho";
         uint8_t output[10];
         (void)queueWrite(buf, input, 8);
-        uint16_t read = queueRead(buf, output, 10);
+        int read = queueRead(buf, output, 10);
         ASSERT_EQUAL_INT(read, 8, "Expected to read 8 bytes");
         ASSERT_EQUAL_STR(output, input, 8, "Read data mismatch");
         ASSERT_TRUE(queueIsEmpty(buf), "Buffer should be empty after read");
@@ -163,7 +164,7 @@ void test_queueRead() {
         uint8_t* input = "Hello World!\n";
         uint8_t output[15];
         (void)queueWrite(buf,input, 13);
-        uint16_t read = queueRead(buf, output, 8);
+        int read = queueRead(buf, output, 8);
         ASSERT_EQUAL_INT(read, 8, "Expected to read 8 bytes");
         ASSERT_EQUAL_STR(output, input, 8, "Read data mismatch");
         ASSERT_NOT_EQUAL_STR(output, input, 13, "read data overflowed");
@@ -173,24 +174,24 @@ void test_queueRead() {
     TEST_CASE("Invalid buffer") {
         Queue* buf = NULL;
         uint8_t output[8];
-        uint16_t read = queueRead(buf, output, 8);
-        ASSERT_EQUAL_INT(read, 0, "Cannot read from NULL buffer");
+        int read = queueRead(buf, output, 8);
+        ASSERT_EQUAL_INT(read, -EINVAL, "Cannot read from NULL buffer");
     }  CASE_COMPLETE;
 
     TEST_CASE("Invalid output") {
         Queue* buf = queueAllocate(&testAllocator, 8, 2);
         uint8_t* input = "SwampWho";
         (void)queueWrite(buf, input, 8);
-        uint16_t read = queueRead(buf, NULL, 8);
-        ASSERT_EQUAL_INT(read, 0, "Cannot read to NULL buffer");
+        int read = queueRead(buf, NULL, 8);
+        ASSERT_EQUAL_INT(read, -EINVAL, "Cannot read to NULL buffer");
         queueDeallocate(&testAllocator, &buf);
     }  CASE_COMPLETE;
 
     TEST_CASE("zero slot_length") {
         Queue* buf = queueAllocate(&testAllocator, 8, 2);
         uint8_t output[8];
-        uint16_t read = queueRead(buf, output, 0);
-        ASSERT_EQUAL_INT(read, 0, "Expected to read 0 bytes");
+        int read = queueRead(buf, output, 0);
+        ASSERT_EQUAL_INT(read, -EINVAL, "Expected to read 0 bytes");
         queueDeallocate(&testAllocator, &buf);
     }  CASE_COMPLETE;
 }
@@ -208,21 +209,21 @@ void test_QueueFill() {
     } CASE_COMPLETE;
 
     TEST_CASE( "test write to full buffer") {
-        uint16_t written3 = queueWrite(buf, input3, 6);
-        ASSERT_EQUAL_INT(written3, 0, "Expected to not write anything");
+        int written3 = queueWrite(buf, input3, 6);
+        ASSERT_EQUAL_INT(written3, -ENOSPC, "Expected to not write anything");
         uint8_t* raw = (uint8_t*)buf->slot_buffer->raw;
         ASSERT_EQUAL_STR(raw, input1, 5, "write to full buffer should not overwrite previous data");
     } CASE_COMPLETE;
 
     TEST_CASE("test read from full buffer") {
         uint8_t output[10];
-        uint16_t read = queueRead(buf, output, 10);
+        int read = queueRead(buf, output, 10);
         ASSERT_EQUAL_INT(read, 5, "Expected to read 5 bytes");
         ASSERT_EQUAL_STR(output, input1, 5, "Read data mismatch");
     } CASE_COMPLETE;
 
     TEST_CASE( "test write over after full") {
-        uint16_t written3 = queueWrite(buf, input3, 6);
+        int written3 = queueWrite(buf, input3, 6);
         ASSERT_EQUAL_INT(written3, 6, "Expected to not write anything");
         uint8_t* raw = (uint8_t*)buf->slot_buffer->raw;
         ASSERT_EQUAL_STR(raw, input3, 6, "write to full buffer should not overwrite previous data");

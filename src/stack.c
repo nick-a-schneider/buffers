@@ -2,6 +2,7 @@
 #include "block_allocator.h"
 #include <stdint.h>
 #include <stdbool.h>
+#include <errno.h>
 
 static inline void memcpy(void *dest, const void *src, uint16_t size) {
     for (uint16_t i = 0; i < size; ++i) {
@@ -26,14 +27,15 @@ Stack* stackAllocate(BlockAllocator* allocator, uint16_t size, uint16_t type_siz
     return stack;
 }
 
-bool stackDeallocate(BlockAllocator* allocator, Stack** stack) {
-    if (!allocator) return false;
-    if (!stack || !(*stack)) return false;
-    bool res = true;
-    res &= blockDeallocate(allocator, (*stack)->raw);
-    res &= blockDeallocate(allocator, *stack);
-    if (res) *stack = NULL;
-    return res;
+int stackDeallocate(BlockAllocator* allocator, Stack** stack) {
+    if (!allocator || !stack || !(*stack)) return -EINVAL;
+    int res1, res2 = STACK_OK;
+    res1 = blockDeallocate(allocator, (*stack)->raw);
+    res2 = blockDeallocate(allocator, *stack);
+    if (res1 != STACK_OK) return res1;
+    if (res2 != STACK_OK) return res2;
+    *stack = NULL;
+    return STACK_OK;
 }
 
 void stackClear(Stack* stack) {
@@ -42,20 +44,20 @@ void stackClear(Stack* stack) {
     stack->full = false;
 }
 
-bool stackPush(Stack* stack, const void* data) {
-    if (!stack || !data) return false;
-    if (stack->top == stack->size) return false;
+int stackPush(Stack* stack, const void* data) {
+    if (!stack || !data) return -EINVAL;
+    if (stack->top == stack->size) return -ENOSPC;
     uint8_t* head_addr = (uint8_t*)stack->raw + (stack->top * stack->type_size);
     memcpy((void*)head_addr, data, stack->type_size);
     stack->top += 1;
-    return true;
+    return STACK_OK;
 }
 
-bool stackPop(Stack* stack, void* data) {
-    if (!stack || !data) return false;
-    if (stack->top == 0) return false;
+int stackPop(Stack* stack, void* data) {
+    if (!stack || !data) return -EINVAL;
+    if (stack->top == 0) return -EAGAIN;
     uint8_t* tail_addr = (uint8_t*)stack->raw + ((stack->top - 1) * stack->type_size);
     memcpy(data, (void*)tail_addr, stack->type_size);
     stack->top--;
-    return true;
+    return STACK_OK;
 }

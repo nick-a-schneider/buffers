@@ -4,6 +4,8 @@
 #include <stdbool.h>
 #include <stdint.h>
 
+#define BUFFER_OK 0
+
 typedef struct {
     bool full;
     void* raw;
@@ -15,7 +17,7 @@ typedef struct {
 
 Buffer* bufferAllocate(BlockAllocator* allocator, uint16_t size, uint16_t type_size);
 
-bool bufferDeallocate(BlockAllocator* allocator, Buffer** buffer);
+int bufferDeallocate(BlockAllocator* allocator, Buffer** buffer);
 
 void __bufferMoveTail(Buffer* buffer, uint16_t offset);
 
@@ -27,6 +29,6 @@ bool bufferIsEmpty(const Buffer* buffer);
 
 bool bufferIsFull(const Buffer* buffer);
 
-bool bufferWrite(Buffer* buffer, const void* data);
+int bufferWrite(Buffer* buffer, const void* data);
 
-bool bufferRead(Buffer* buffer, void* data);
+int bufferRead(Buffer* buffer, void* data);

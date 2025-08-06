@@ -2,6 +2,8 @@
 #include <stdint.h>
 #include <stdbool.h>
 
+#define STACK_OK 0
+
 typedef struct {
     bool full;
     uint16_t size;
@@ -12,10 +14,10 @@ typedef struct {
 
 Stack* stackAllocate(BlockAllocator* allocator, uint16_t size, uint16_t type_size);
 
-bool stackDeallocate(BlockAllocator* allocator, Stack** stack);
+int stackDeallocate(BlockAllocator* allocator, Stack** stack);
 
 void stackClear(Stack* stack);
 
-bool stackPush(Stack* stack, const void* data);
+int stackPush(Stack* stack, const void* data);
 
-bool stackPop(Stack* stack, void* data);
+int stackPop(Stack* stack, void* data);

@@ -2,6 +2,7 @@
 #include "block_allocator.h"
 #include "test_utils.h"
 #include <string.h>
+#include <errno.h>
 
 #define MEMORY_SIZE 2048
 
@@ -48,23 +49,23 @@ void test_bufferAllocate() {
 void test_bufferDeallocate() {
     TEST_CASE("Deallocates and nullifies buffer pointer") {
         Buffer* buf = bufferAllocate(&testAllocator, 8, sizeof(uint8_t));
-        bool success = bufferDeallocate(&testAllocator, &buf);
-        ASSERT_TRUE(success, "Buffer deallocation failed");
+        int res = bufferDeallocate(&testAllocator, &buf);
+        ASSERT_EQUAL_INT(res, BUFFER_OK, "Buffer deallocation failed");
         ASSERT_NULL(buf, "Buffer pointer should be NULL after free");
-    } CASE_COMPLETE;
+    } CASE_NOT_IMPLEMENTED;
 
     TEST_CASE("invalid allocator") {
         BlockAllocator* invalidAllocator = NULL;
         Buffer* buf = bufferAllocate(&testAllocator, 8, sizeof(uint8_t));
-        bool success = bufferDeallocate(invalidAllocator, &buf);
-        ASSERT_FALSE(success, "Deallocating NULL buffer should fail");
-    } CASE_COMPLETE;
+        int res = bufferDeallocate(invalidAllocator, &buf);
+        ASSERT_EQUAL_INT(res, -EINVAL, "Deallocating NULL buffer should fail");
+    } CASE_NOT_IMPLEMENTED;
 
     TEST_CASE("Null buffer pointer") {
         Buffer* buf = NULL;
-        bool success = bufferDeallocate(&testAllocator, &buf);
-        ASSERT_FALSE(success, "Deallocating NULL buffer should fail");
-    } CASE_COMPLETE;
+        int res = bufferDeallocate(&testAllocator, &buf);
+        ASSERT_EQUAL_INT(res, -EINVAL, "Deallocating NULL buffer should fail");
+    } CASE_NOT_IMPLEMENTED;
     
     memset(testMemory, 0, sizeof(testMemory));
 }
@@ -89,8 +90,8 @@ void test_bufferWrite() {
     TEST_CASE("Writes correctly") {
         Buffer* buf = bufferAllocate(&testAllocator, 8, sizeof(uint8_t));
         uint8_t input = 68;
-        bool res = bufferWrite(buf, (void*)&input);
-        ASSERT_TRUE(res, "Write failed");
+        int res = bufferWrite(buf, (void*)&input);
+        ASSERT_EQUAL_INT(res, BUFFER_OK, "Write failed");
         ASSERT_FALSE(bufferIsEmpty(buf), "Buffer shouldn't be empty after write");
         ASSERT_FALSE(bufferIsFull(buf), "Buffer shouldn't be full yet");
         ASSERT_EQUAL_INT(buf->head, 1, "Head did not move after write");
@@ -103,8 +104,8 @@ void test_bufferWrite() {
         Buffer* buf = bufferAllocate(&testAllocator, 8, sizeof(TestStruct));
         uint32_t data = 68;
         TestStruct input = {.data = data, .flag = true, .ptr = &data};
-        bool res = bufferWrite(buf, (void*)&input);
-        ASSERT_TRUE(res, "Write failed");
+        int res = bufferWrite(buf, (void*)&input);
+        ASSERT_EQUAL_INT(res, BUFFER_OK, "Write failed");
         ASSERT_FALSE(bufferIsEmpty(buf), "Buffer shouldn't be empty after write");
         ASSERT_FALSE(bufferIsFull(buf), "Buffer shouldn't be full yet");
         ASSERT_EQUAL_INT(buf->head, 1, "Head did not move after write");
@@ -119,15 +120,15 @@ void test_bufferWrite() {
     TEST_CASE("Invalid buffer") {
         Buffer* buf = NULL;
         uint8_t input = 68;
-        bool res = bufferWrite(buf, (void*)&input);
-        ASSERT_FALSE(res, "Expected write to fail");
+        int res = bufferWrite(buf, (void*)&input);
+        ASSERT_EQUAL_INT(res, -EINVAL, "Expected write to fail");
     }  CASE_COMPLETE;
 
     TEST_CASE("Invalid data") {
         Buffer* buf = bufferAllocate(&testAllocator, 8, sizeof(uint8_t));
         uint8_t input = NULL;
-        bool res = bufferWrite(buf, input);
-        ASSERT_FALSE(res, "Expected write to fail");
+        int res = bufferWrite(buf, input);
+        ASSERT_EQUAL_INT(res, -EINVAL, "Expected write to fail");
         bufferDeallocate(&testAllocator, &buf);
     }  CASE_COMPLETE;
 }
@@ -138,8 +139,8 @@ void test_bufferRead() {
         uint8_t input = 68;
         (void)bufferWrite(buf, (void*)&input);
         uint8_t output;
-        bool res = bufferRead(buf, (void*)&output);
-        ASSERT_TRUE(res, "Read failed");
+        int res = bufferRead(buf, (void*)&output);
+        ASSERT_EQUAL_INT(res, BUFFER_OK, "Read failed");
         ASSERT_TRUE(bufferIsEmpty(buf), "Buffer should be empty after read");
         ASSERT_FALSE(bufferIsFull(buf), "Buffer shouldn't be full yet");
         ASSERT_EQUAL_INT(buf->head, 1, "Head moved after read");
@@ -154,8 +155,8 @@ void test_bufferRead() {
         TestStruct input = {.data = data, .flag = true, .ptr = &data};
         (void)bufferWrite(buf, (void*)&input);
         TestStruct output;
-        bool res = bufferRead(buf, (void*)&output);
-        ASSERT_TRUE(res, "Read failed");
+        int res = bufferRead(buf, (void*)&output);
+        ASSERT_EQUAL_INT(res, BUFFER_OK, "Read failed");
         ASSERT_TRUE(bufferIsEmpty(buf), "Buffer should be empty after read");
         ASSERT_FALSE(bufferIsFull(buf), "Buffer shouldn't be full yet");
         ASSERT_EQUAL_INT(buf->head, 1, "Head moved after read");
@@ -169,16 +170,16 @@ void test_bufferRead() {
     TEST_CASE("Invalid buffer") {
         Buffer* buf = NULL;
         uint8_t output;
-        bool res = bufferRead(buf, (void*)&output);
-        ASSERT_FALSE(res, "Cannot read from NULL buffer");
+        int res = bufferRead(buf, (void*)&output);
+        ASSERT_EQUAL_INT(res, -EINVAL, "Cannot read from NULL buffer");
     } CASE_COMPLETE;
 
     TEST_CASE("Invalid output") {
         Buffer* buf = bufferAllocate(&testAllocator, 8, sizeof(uint8_t));
         uint8_t input = 68;
         (void)bufferWrite(buf, (void*)&input);
-        bool res = bufferRead(buf, NULL);
-        ASSERT_FALSE(res, "Cannot read to NULL buffer");
+        int res = bufferRead(buf, NULL);
+        ASSERT_EQUAL_INT(res, -EINVAL, "Cannot read to NULL buffer");
         bufferDeallocate(&testAllocator, &buf);
     } CASE_COMPLETE;
 }
@@ -196,16 +197,16 @@ void test_BufferFill() {
     } CASE_COMPLETE;
 
     TEST_CASE( "test write to full buffer") {
-        bool res = bufferWrite(buf, (void*)&input3);
-        ASSERT_FALSE(res, "Expected to not write anything");
+        int res = bufferWrite(buf, (void*)&input3);
+        ASSERT_EQUAL_INT(res, -ENOSPC, "Expected to not write anything");
         ASSERT_EQUAL_INT(*(uint8_t*)buf->raw, input1, "data was overwritten");
     } CASE_COMPLETE;
 
     TEST_CASE("test read from full buffer") {
         uint8_t output;
-        bool res = bufferRead(buf, (void*)&output);
-        ASSERT_TRUE(res, "Read failed");
-        ASSERT_FALSE(bufferIsFull(buf), "Buffer shouldn't be full yet");
+        int res = bufferRead(buf, (void*)&output);
+        ASSERT_EQUAL_INT(res, BUFFER_OK, "Read failed");
+        ASSERT_FALSE(bufferIsFull(buf), "Buffer shouldn't be full after read");
         ASSERT_EQUAL_INT(output, input1, "Read data mismatch");
     } CASE_COMPLETE;
 

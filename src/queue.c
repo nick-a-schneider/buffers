@@ -1,7 +1,7 @@
 #include "queue.h"
 #include "buffer.h"
 #include "block_allocator.h"
-#include <stdio.h>
+#include <errno.h>
 
 Queue* queueAllocate(BlockAllocator* allocator, uint16_t slot_len, uint16_t size) {
     if (!allocator) return NULL;
@@ -23,15 +23,17 @@ Queue* queueAllocate(BlockAllocator* allocator, uint16_t slot_len, uint16_t size
     return queue;
 }
 
-bool queueDeallocate(BlockAllocator* allocator, Queue** queue) {
-    if (!allocator) return false;
-    if (!queue || !(*queue)) return false;
-    bool res = true;
-    res &= bufferDeallocate(allocator, (&(*queue)->slot_buffer));
-    res &= blockDeallocate(allocator, (*queue)->msg_len);
-    res &= blockDeallocate(allocator, *queue);
-    if (res) *queue = NULL;
-    return res;
+int queueDeallocate(BlockAllocator* allocator, Queue** queue) {
+    if (!allocator ||!queue || !(*queue)) return -EINVAL;
+    int res1, res2, res3;
+    res1 = bufferDeallocate(allocator, (&(*queue)->slot_buffer));
+    res2 = blockDeallocate(allocator, (*queue)->msg_len);
+    res3 = blockDeallocate(allocator, *queue);
+    if (res1 != QUEUE_OK) return res1;
+    if (res2 != QUEUE_OK) return res2;
+    if (res3 != QUEUE_OK) return res3;
+    *queue = NULL;
+    return QUEUE_OK;
 }
 
 void queueClear(Queue* queue) {
@@ -50,9 +52,9 @@ bool queueIsFull(const Queue* queue) {
     return bufferIsFull(queue->slot_buffer);
 }
 
-uint16_t queueWrite(Queue* queue, const uint8_t* data, uint16_t len) {
-    if (!queue || !data || len == 0) return 0;
-    if (queueIsFull(queue)) return 0;
+int queueWrite(Queue* queue, const uint8_t* data, uint16_t len) {
+    if (!queue || !data || len == 0) return -EINVAL;
+    if (queueIsFull(queue)) return -ENOSPC;
     uint16_t orig_size  = queue->slot_buffer->type_size;
 
     if (len < queue->slot_len){
@@ -60,15 +62,16 @@ uint16_t queueWrite(Queue* queue, const uint8_t* data, uint16_t len) {
     }
     if (len > queue->slot_len) len = queue->slot_len;
     uint16_t head = queue->slot_buffer->head;
-    bool res = bufferWrite(queue->slot_buffer, (void*)data);
+    int res = bufferWrite(queue->slot_buffer, (void*)data);
     queue->slot_buffer->type_size = orig_size;
-    if (!res) return 0;
+    if (res < BUFFER_OK) return res;
     queue->msg_len[head] = len;
     return len;
 }
 
-uint16_t queueRead(Queue* queue, uint8_t* data, uint16_t len) {
-    if (!queue || !data || queueIsEmpty(queue)) return 0;
+int queueRead(Queue* queue, uint8_t* data, uint16_t len) {
+    if (!queue || !data || len == 0) return -EINVAL;
+    if (queueIsEmpty(queue)) return -EAGAIN;
     uint16_t tail_len = queue->msg_len[queue->slot_buffer->tail];
     len = (len < tail_len) ? len : tail_len;
     uint16_t orig_size  = queue->slot_buffer->type_size;
@@ -76,9 +79,9 @@ uint16_t queueRead(Queue* queue, uint8_t* data, uint16_t len) {
         queue->slot_buffer->type_size = len * sizeof(uint8_t);
     }
     uint16_t tail = queue->slot_buffer->tail;
-    bool res = bufferRead(queue->slot_buffer, (void*)data);
+    int res = bufferRead(queue->slot_buffer, (void*)data);
     queue->slot_buffer->type_size = orig_size;
     queue->msg_len[tail] = 0;
-    if (!res) return 0;
+    if (res < BUFFER_OK) return res;
     return len;
 }
