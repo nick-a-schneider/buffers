@@ -19,7 +19,16 @@ set(TEST_SOURCES
     buffer.c
     stack.c
 )
-add_compile_definitions(DEBUG=1)
+
+set(TEST_LIBS
+    buffers
+    test_utils
+)
+
+if (USE_BITMAP_ALLOCATOR)
+    list(APPEND TEST_LIBS bitmap_allocator)
+endif()
+
 foreach(test_src IN LISTS TEST_SOURCES)
     # Strip extension and prefix with "test_"
     get_filename_component(test_name ${test_src} NAME_WE)  
@@ -27,10 +36,12 @@ foreach(test_src IN LISTS TEST_SOURCES)
 
     add_executable(${exe_name} ${exe_name}.c)
     target_link_libraries(${exe_name} PRIVATE
-        buffers
-        bitmap_allocator
-        test_utils
+        ${TEST_LIBS}
     )
+
+    if(USE_BITMAP_ALLOCATOR)
+        target_compile_definitions(${exe_name} PRIVATE USE_BITMAP_ALLOCATOR)
+    endif()
 
     add_test(NAME ${test_name} COMMAND ${exe_name})
 endforeach()

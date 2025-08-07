@@ -10,7 +10,8 @@
                 "-S", ".",
                 "-B", "build",
                 "-DBUILD_TESTS=ON",  
-                "-DCMAKE_BUILD_TYPE=Debug"
+                "-DCMAKE_BUILD_TYPE=Debug",
+                "-DUSE_BITMAP_ALLOCATOR=ON"
             ],
             "icon": { "id": "tools" },
         },

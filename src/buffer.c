@@ -1,5 +1,7 @@
 #include "buffer.h"
+#ifdef USE_BITMAP_ALLOCATOR
 #include "block_allocator.h"
+#endif
 #include <stdint.h>
 #include <stdbool.h>
 #include <errno.h>
@@ -24,6 +26,7 @@ static inline void memcpy(void *dest, const void *src, uint16_t size) {
 
 /* -- Public Functions ----------------------------------------------------- */
 
+#ifdef USE_BITMAP_ALLOCATOR
 /**
  * @details
  * Allocates and initializes a circular buffer using the provided BlockAllocator.
@@ -33,6 +36,9 @@ static inline void memcpy(void *dest, const void *src, uint16_t size) {
  *
  * If allocation of the raw buffer fails, the previously allocated Buffer
  * structure is automatically deallocated.
+ * 
+ * @note
+ * This function is only available if `USE_BITMAP_ALLOCATOR` is defined.
  */
 Buffer* bufferAllocate(BlockAllocator* allocator, uint16_t size, uint16_t type_size) {
     if (!allocator) return NULL;
@@ -58,6 +64,9 @@ Buffer* bufferAllocate(BlockAllocator* allocator, uint16_t size, uint16_t type_s
  * @details
  * Deallocates a Buffer and its associated raw data from the given BlockAllocator.
  * The pointer to the Buffer is set to NULL upon successful deallocation.
+ * 
+ * @note
+ * This function is only available if `USE_BITMAP_ALLOCATOR` is defined.
  */
 int bufferDeallocate(BlockAllocator* allocator, Buffer** buffer) {
     if (!allocator || !buffer || !(*buffer)) return -EINVAL;
@@ -69,6 +78,7 @@ int bufferDeallocate(BlockAllocator* allocator, Buffer** buffer) {
     *buffer = NULL;
     return BUFFER_OK;
 }
+#endif
 
 /**
  * @details

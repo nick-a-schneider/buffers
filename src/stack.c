@@ -1,5 +1,7 @@
 #include "stack.h"
+#ifdef USE_BITMAP_ALLOCATOR
 #include "block_allocator.h"
+#endif
 #include <stdint.h>
 #include <stdbool.h>
 #include <errno.h>
@@ -23,6 +25,7 @@ static inline void memcpy(void *dest, const void *src, uint16_t size) {
     }
 }
 
+#ifdef USE_BITMAP_ALLOCATOR
 /**
  * @details
  * Allocates a stack structure and backing storage from the provided BlockAllocator.
@@ -31,6 +34,9 @@ static inline void memcpy(void *dest, const void *src, uint16_t size) {
  * - Initializes internal fields such as `type_size`, `size`, `top`, and `full`.
  *
  * If any allocation fails, all intermediate allocations are cleaned up to avoid leaks.
+ *
+ * @note
+ * This function is only available if `USE_BITMAP_ALLOCATOR` is defined.
  */
 Stack* stackAllocate(BlockAllocator* allocator, uint16_t size, uint16_t type_size) {
     if (!allocator) return NULL;
@@ -57,6 +63,9 @@ Stack* stackAllocate(BlockAllocator* allocator, uint16_t size, uint16_t type_siz
  * - On success, the caller's stack pointer is set to NULL.
  *
  * If any deallocation fails, the corresponding error code is returned.
+ *
+ * @note
+ * This function is only available if `USE_BITMAP_ALLOCATOR` is defined.
  */
 int stackDeallocate(BlockAllocator* allocator, Stack** stack) {
     if (!allocator || !stack || !(*stack)) return -EINVAL;
@@ -68,7 +77,7 @@ int stackDeallocate(BlockAllocator* allocator, Stack** stack) {
     *stack = NULL;
     return STACK_OK;
 }
-
+#endif
 
 /**
  * @details

@@ -1,11 +1,46 @@
 #pragma once
-
+/**
+ * @file queue.h
+ * @brief FIFO queue built on a circular buffer.
+ *
+ * This header defines a simple  FIFO queue, with lements stored in
+ * contiguous memory. 
+ * 
+ * The underlying buffer can be statically allocated or managed via a
+ * user-provided BlockAllocator.
+ */
+#ifdef USE_BITMAP_ALLOCATOR
 #include "block_allocator.h"
+#endif
 #include "buffer.h"
 #include <stdbool.h>
 #include <stdint.h>
 
-#define QUEUE_OK 0
+#define QUEUE_OK 0 // success
+
+/**
+ * @brief Creates a statically allocated `Queue` instance.
+ *
+ * @param id         The identifier for the queue instance.
+ * @param msg_size   Maximum size in bytes of each message.
+ * @param msg_count  Maximum number of messages the queue can store.
+ *
+ * This macro defines a `Queue` and its underlying buffer and message
+ * length tracking array, all backed by static memory.
+ */
+#define CREATE_QUEUE(id, msg_size, msg_count)               \
+    uint16_t __##id##_msg_len[(msg_count)] = {0};           \
+    uint8_t __##id##_raw[(msg_count) * (msg_size)] = {0};   \
+    Buffer __##id##_buf = __INIT_BUFFER(                    \
+        msg_count,                                          \
+        msg_size,                                           \
+        __##id##_raw                                        \
+    );                                                      \
+    Queue id = {                                            \
+        .slot_buffer = &__##id##_buf,                       \
+        .msg_len = __##id##_msg_len,                        \
+        .slot_len = msg_size                                \
+    }
 
 /**
  * @brief Fixed-size message queue with variable-length messages.
@@ -19,6 +54,7 @@ typedef struct {
     uint16_t slot_len;     ///< Maximum message length per slot (in bytes)
 } Queue;
 
+#ifdef USE_BITMAP_ALLOCATOR
 /**
  * @brief Allocates and initializes a new message queue.
  *
@@ -39,6 +75,7 @@ Queue* queueAllocate(BlockAllocator* allocator, uint16_t slot_len, uint16_t size
  * @return errno: [EINVAL, EFAULT, QUEUE_OK]
  */
 int queueDeallocate(BlockAllocator* allocator, Queue** queue);
+#endif
 
 /**
  * @brief Clears the queue, resetting message lengths and positions.

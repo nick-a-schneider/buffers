@@ -1,3 +1,4 @@
+#pragma once
 /**
  * @file stack.h
  * @brief Lightweight, type-agnostic stack implementation with optional allocator support.
@@ -7,12 +8,33 @@
  * designed for embedded systems or environments where memory management needs to be explicit.
  */
 
+#ifdef USE_BITMAP_ALLOCATOR
 #include "block_allocator.h"
+#endif
 #include <stdint.h>
 #include <stdbool.h>
 
-#define STACK_OK 0
+#define STACK_OK 0 // success
 
+/**
+ * @brief Creates a statically allocated stack instance.
+ *
+ * @param id         The identifier for the stack instance.
+ * @param type_size_  The size in bytes of the data type to be stored.
+ * @param count      The number of elements the stack can hold.
+ *
+ * This macro creates a `Stack` variable and backing storage using static memory.
+ */
+#define CREATE_STACK(id, count, type_size_)                         \
+    uint8_t __##id##_raw[(count) * (type_size_)] = {0};             \
+    Stack id = {                                                   \
+        .raw = __##id##_raw,                                       \
+        .type_size = (type_size_),                                  \
+        .size = (count),                                           \
+        .top = 0,                                                  \
+        .full = false                                              \
+    }
+    
 /**
  * @struct Stack
  * @brief Data structure representing a generic fixed-size stack.
@@ -28,6 +50,7 @@ typedef struct {
     void* raw;          /**< Pointer to backing storage. */
 } Stack;
 
+#ifdef USE_BITMAP_ALLOCATOR
 /**
  * @brief Allocate a stack dynamically using a BlockAllocator.
  *
@@ -47,6 +70,7 @@ Stack* stackAllocate(BlockAllocator* allocator, uint16_t size, uint16_t type_siz
  * @return 0 on success, or an error code on failure.
  */
 int stackDeallocate(BlockAllocator* allocator, Stack** stack);
+#endif
 
 /**
  * @brief Clear the contents of a stack without freeing memory.

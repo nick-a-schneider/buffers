@@ -1,8 +1,11 @@
 #include "queue.h"
 #include "buffer.h"
+#ifdef USE_BITMAP_ALLOCATOR
 #include "block_allocator.h"
+#endif
 #include <errno.h>
 
+#ifdef USE_BITMAP_ALLOCATOR
 /**
  * @details
  * Allocates memory for a Queue structure using the provided BlockAllocator.
@@ -11,6 +14,9 @@
  * - A parallel array (`msg_len`) to track the actual length of each stored message.
  *
  * If any allocation fails, all previously allocated structures are cleaned up.
+ * 
+ * @note
+ * This function is only available if `USE_BITMAP_ALLOCATOR` is defined.
  */
 Queue* queueAllocate(BlockAllocator* allocator, uint16_t slot_len, uint16_t size) {
     if (!allocator) return NULL;
@@ -37,6 +43,9 @@ Queue* queueAllocate(BlockAllocator* allocator, uint16_t slot_len, uint16_t size
  * Frees all memory associated with the queue using the original allocator.
  * This includes the slot buffer, the message length array, and the queue struct itself.
  * On success, sets the queue pointer to NULL.
+ * 
+ * @note
+ * This function is only available if `USE_BITMAP_ALLOCATOR` is defined.
  */
 int queueDeallocate(BlockAllocator* allocator, Queue** queue) {
     if (!allocator ||!queue || !(*queue)) return -EINVAL;
@@ -50,7 +59,7 @@ int queueDeallocate(BlockAllocator* allocator, Queue** queue) {
     *queue = NULL;
     return QUEUE_OK;
 }
-
+#endif
 
 /**
  * @details
