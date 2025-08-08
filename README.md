@@ -8,7 +8,7 @@ Provides a **circular FIFO buffer** implementation. Supports arbitrary element t
 #include "buffer.h"
 
 // Create a circular buffer for 12 integers
-CREATE_BUFFER(int_buf, 12, int);
+CREATE_BUFFER(int_buf, 12, sizeof(int));
 
 int int_val = 42;
 int int_res = bufferWrite(&int_buf, (void*)&int_val);
@@ -21,7 +21,7 @@ typedef struct {
     char* y;
 } Data_t;
 
-CREATE_BUFFER(data_buf, 12, Data_t);
+CREATE_BUFFER(data_buf, 12, sizeof(Data_t));
 
 Data_t data_val = {
     .x = 42,

@@ -111,18 +111,10 @@ bool queueIsFull(const Queue* queue) {
  */
 int queueWrite(Queue* queue, const uint8_t* data, uint16_t len) {
     if (!queue || !data || len == 0) return -EINVAL;
-    if (queueIsFull(queue)) return -ENOSPC;
-    uint16_t orig_size  = queue->slot_buffer->type_size;
-
-    if (len < queue->slot_len){
-        queue->slot_buffer->type_size = len * sizeof(uint8_t);
-    }
-    if (len > queue->slot_len) len = queue->slot_len;
-    uint16_t head = queue->slot_buffer->head;
-    int res = bufferWrite(queue->slot_buffer, (void*)data);
-    queue->slot_buffer->type_size = orig_size;
+    len = (len > queue->slot_len) ? queue->slot_len : len;
+    int res = bufferWriteRaw(queue->slot_buffer, (void*)data, len);
     if (res < BUFFER_OK) return res;
-    queue->msg_len[head] = len;
+    queue->msg_len[res] = len;
     return len;
 }
 
@@ -138,17 +130,12 @@ int queueWrite(Queue* queue, const uint8_t* data, uint16_t len) {
  */
 int queueRead(Queue* queue, uint8_t* data, uint16_t len) {
     if (!queue || !data || len == 0) return -EINVAL;
-    if (queueIsEmpty(queue)) return -EAGAIN;
-    uint16_t tail_len = queue->msg_len[queue->slot_buffer->tail];
-    len = (len < tail_len) ? len : tail_len;
-    uint16_t orig_size  = queue->slot_buffer->type_size;
-    if (len < queue->slot_len) {
-        queue->slot_buffer->type_size = len * sizeof(uint8_t);
-    }
-    uint16_t tail = queue->slot_buffer->tail;
-    int res = bufferRead(queue->slot_buffer, (void*)data);
-    queue->slot_buffer->type_size = orig_size;
-    queue->msg_len[tail] = 0;
+    len = (len < queue->slot_len) ? len : queue->slot_len;
+    int res = bufferReadRaw(queue->slot_buffer, (void*)data, len);
     if (res < BUFFER_OK) return res;
-    return len;
+    uint16_t msg_len = queue->msg_len[res];
+    msg_len = (len < msg_len) ? len : msg_len;
+    for (uint16_t i = msg_len; i < len; i++) data[i] = '\0';
+    queue->msg_len[res] = 0;
+    return msg_len;
 }

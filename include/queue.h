@@ -28,18 +28,17 @@
  * This macro defines a `Queue` and its underlying buffer and message
  * length tracking array, all backed by static memory.
  */
-#define CREATE_QUEUE(id, msg_size, msg_count)               \
-    uint16_t __##id##_msg_len[(msg_count)] = {0};           \
-    uint8_t __##id##_raw[(msg_count) * (msg_size)] = {0};   \
-    Buffer __##id##_buf = __INIT_BUFFER(                    \
-        msg_count,                                          \
-        msg_size,                                           \
-        __##id##_raw                                        \
-    );                                                      \
-    Queue id = {                                            \
-        .slot_buffer = &__##id##_buf,                       \
-        .msg_len = __##id##_msg_len,                        \
-        .slot_len = msg_size                                \
+#define CREATE_QUEUE(id, msg_size, msg_count)       \
+    uint16_t __##id##_msg_len[(msg_count)] = {0};   \
+    CREATE_BUFFER(                                  \
+        __##id##_buf,                               \
+        msg_count,                                  \
+        msg_size * sizeof(uint8_t)                  \
+    );                                              \
+    Queue id = {                                    \
+        .slot_buffer = &__##id##_buf,               \
+        .msg_len = __##id##_msg_len,                \
+        .slot_len = msg_size                        \
     }
 
 /**

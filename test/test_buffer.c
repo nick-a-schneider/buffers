@@ -76,7 +76,7 @@ void test_bufferDeallocate() {
 
 void test_bufferCreateMacro() {
     TEST_CASE("Creates buffer correctly") {
-        CREATE_BUFFER(buf, 8, uint8_t);
+        CREATE_BUFFER(buf, 8, sizeof(uint8_t));
         ASSERT_NOT_NULL(buf.raw, "raw pointer should not be NULL");
         ASSERT_EQUAL_INT(buf.size, 8, "size should be 8 on init");
         ASSERT_EQUAL_INT(buf.type_size, sizeof(uint8_t), "type size should be 1 on init");
@@ -88,7 +88,7 @@ void test_bufferCreateMacro() {
 
 void test_bufferClear() {
     TEST_CASE("Clears head/tail/full") {
-        CREATE_BUFFER(buf, 8, uint8_t);
+        CREATE_BUFFER(buf, 8, sizeof(uint8_t));
         buf.head = 2; buf.tail = 1; buf.full = true;
         uint8_t* raw = (uint8_t*)buf.raw;
         bufferClear(&buf);
@@ -103,7 +103,7 @@ void test_bufferClear() {
 
 void test_bufferWrite() {
     TEST_CASE("Writes correctly") {
-        CREATE_BUFFER(buf, 8, uint8_t);
+        CREATE_BUFFER(buf, 8, sizeof(uint8_t));
         uint8_t input = 68;
         int res = bufferWrite(&buf, (void*)&input);
         ASSERT_EQUAL_INT(res, BUFFER_OK, "Write failed");
@@ -115,7 +115,7 @@ void test_bufferWrite() {
     } CASE_COMPLETE;
 
     TEST_CASE("Writes complex structure") {
-        CREATE_BUFFER(buf, 8, TestStruct);
+        CREATE_BUFFER(buf, 8, sizeof(TestStruct));
         uint32_t data = 68;
         TestStruct input = {.data = data, .flag = true, .ptr = &data};
         int res = bufferWrite(&buf, (void*)&input);
@@ -138,7 +138,7 @@ void test_bufferWrite() {
     }  CASE_COMPLETE;
 
     TEST_CASE("Invalid data") {
-        CREATE_BUFFER(buf, 8, uint8_t);
+        CREATE_BUFFER(buf, 8, sizeof(uint8_t));
         uint8_t* input = NULL;
         int res = bufferWrite(&buf, input);
         ASSERT_EQUAL_INT(res, -EINVAL, "Expected write to fail");
@@ -147,7 +147,7 @@ void test_bufferWrite() {
 
 void test_bufferRead() {
     TEST_CASE("Reads correctly") {
-        CREATE_BUFFER(buf, 8, uint8_t);
+        CREATE_BUFFER(buf, 8, sizeof(uint8_t));
         uint8_t input = 68;
         (void)bufferWrite(&buf, (void*)&input);
         uint8_t output;
@@ -161,7 +161,7 @@ void test_bufferRead() {
     } CASE_COMPLETE;
 
     TEST_CASE("read complex structure") {
-        CREATE_BUFFER(buf, 8, TestStruct);
+        CREATE_BUFFER(buf, 8, sizeof(TestStruct));
         uint32_t data = 68;
         TestStruct input = {.data = data, .flag = true, .ptr = &data};
         (void)bufferWrite(&buf, (void*)&input);
@@ -185,7 +185,7 @@ void test_bufferRead() {
     } CASE_COMPLETE;
 
     TEST_CASE("Invalid output") {
-        CREATE_BUFFER(buf, 8, uint8_t);
+        CREATE_BUFFER(buf, 8, sizeof(uint8_t));
         uint8_t input = 68;
         (void)bufferWrite(&buf, (void*)&input);
         int res = bufferRead(&buf, NULL);
@@ -194,7 +194,7 @@ void test_bufferRead() {
 }
 
 void test_BufferFill() {
-    CREATE_BUFFER(buf, 2, uint8_t);
+    CREATE_BUFFER(buf, 2, sizeof(uint8_t));
     uint8_t input1 = 68;
     uint8_t input2 = 24;
     uint8_t input3 = 47;

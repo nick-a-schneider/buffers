@@ -1,4 +1,5 @@
 #include "stack.h"
+#include "locking.h"
 #ifdef USE_BITMAP_ALLOCATOR
 #include "block_allocator.h"
 #endif
@@ -48,6 +49,7 @@ Stack* stackAllocate(BlockAllocator* allocator, uint16_t size, uint16_t type_siz
         (void)blockDeallocate(allocator, stack);
         return NULL;
     }
+    stack->lock = lockAllocate(allocator, size);
     stack->type_size = type_size;
     stack->size = size;
     stack->top = 0;
@@ -69,10 +71,12 @@ Stack* stackAllocate(BlockAllocator* allocator, uint16_t size, uint16_t type_siz
  */
 int stackDeallocate(BlockAllocator* allocator, Stack** stack) {
     if (!allocator || !stack || !(*stack)) return -EINVAL;
-    int res1, res2;
-    res1 = blockDeallocate(allocator, (*stack)->raw);
-    res2 = blockDeallocate(allocator, *stack);
-    if (res1 != BLOCK_ALLOCATOR_OK) return res1;
+    int res1, res2, res3;
+    res1 = lockDeallocate(allocator, (&(*stack)->lock));
+    res2 = blockDeallocate(allocator, (*stack)->raw);
+    res3 = blockDeallocate(allocator, *stack);
+    if (res1 != LOCK_OK) return res1;
+    if (res2 != BLOCK_ALLOCATOR_OK) return res2;
     if (res2 != BLOCK_ALLOCATOR_OK) return res2;
     *stack = NULL;
     return STACK_OK;
@@ -103,12 +107,34 @@ void stackClear(Stack* stack) {
  * This function assumes a fixed-size item and does not manage dynamic types or metadata.
  */
 int stackPush(Stack* stack, const void* data) {
+    // validate arguments
     if (!stack || !data) return -EINVAL;
-    if (stack->top == stack->size) return -ENOSPC;
+    // acquire write lock
+    if (!TAKE_STACK_LOCK(stack->lock)) return -EBUSY;
+    // check if stack is full
+    if (stack->top == stack->size) {
+        CLEAR_STACK_LOCK(stack->lock);
+        return -ENOSPC;
+    }
+    
+    uint16_t cur_top = stack->top;
+    uint8_t slot_expected = BUFFER_FREE;
+    if (!EXPECT_SLOT_STATE(stack->lock, cur_top, &slot_expected, BUFFER_CLAIMED)) {
+        CLEAR_STACK_LOCK(stack->lock);
+        // another process has claimed the slot
+        return -EBUSY;
+    }
+    // With all checks down, we can claim the slot
     uint8_t* head_addr = (uint8_t*)stack->raw + (stack->top * stack->type_size);
-    memcpy((void*)head_addr, data, stack->type_size);
     stack->top += 1;
-    return STACK_OK;
+    // release the write lock
+    CLEAR_STACK_LOCK(stack->lock);
+    // copy the data
+    memcpy((void*)head_addr, data, stack->type_size);
+    // mark the slot as ready
+    SET_SLOT_STATE(stack->lock, cur_top, BUFFER_READY);
+
+    return cur_top;
 }
 
 /**
@@ -121,10 +147,32 @@ int stackPush(Stack* stack, const void* data) {
  * Caller must ensure `data` points to a buffer of sufficient size.
  */
 int stackPop(Stack* stack, void* data) {
+    // validate arguments
     if (!stack || !data) return -EINVAL;
-    if (stack->top == 0) return -EAGAIN;
-    uint8_t* tail_addr = (uint8_t*)stack->raw + ((stack->top - 1) * stack->type_size);
-    memcpy(data, (void*)tail_addr, stack->type_size);
+    // acquire read lock
+    if (!TAKE_STACK_LOCK(stack->lock)) return -EBUSY;
+    // check if stack is empty
+    if (stack->top == 0) {
+        CLEAR_STACK_LOCK(stack->lock); 
+        return -EAGAIN;
+    }
+
+    uint16_t cur_top = stack->top - 1;
+    uint8_t slot_expected = BUFFER_READY;
+    if (!EXPECT_SLOT_STATE(stack->lock, cur_top, &slot_expected, BUFFER_READING)) {
+        CLEAR_STACK_LOCK(stack->lock);
+        // another process has claimed the slot
+        return -EBUSY;
+    }
+    // With all checks down, we can claim the slot
     stack->top--;
-    return STACK_OK;
+    uint8_t* tail_addr = (uint8_t*)stack->raw + (cur_top * stack->type_size);
+    // release the read lock
+    CLEAR_STACK_LOCK(stack->lock);
+    // copy the data
+    memcpy(data, (void*)tail_addr, stack->type_size);
+
+    SET_SLOT_STATE(stack->lock, cur_top, BUFFER_FREE);
+
+    return cur_top;
 }

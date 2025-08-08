@@ -172,7 +172,7 @@ void test_queueRead() {
         CREATE_QUEUE(buf, 15, 2);
         uint8_t* input = "Hello World!\n";
         uint8_t output[15];
-        (void)queueWrite(&buf,input, 13);
+        (void)queueWrite(&buf, input, 13);
         int read = queueRead(&buf, output, 8);
         ASSERT_EQUAL_INT(read, 8, "Expected to read 8 bytes");
         ASSERT_EQUAL_STR(output, input, 8, "Read data mismatch");

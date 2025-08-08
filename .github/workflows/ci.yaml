@@ -20,7 +20,7 @@ jobs:
       uses: actions/checkout@v2
 
     - name: Configure CMake
-      run: cmake -G "Unix Makefiles" -S . -B build -DBUILD_TESTS=ON
+      run: cmake -G "Unix Makefiles" -S . -B build -DBUILD_TESTS=ON -DUSE_BITMAP_ALLOCATOR=ON
 
     - name: Compile Buffers
       run: cmake --build build --verbose

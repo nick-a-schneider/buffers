@@ -8,6 +8,7 @@
  * designed for embedded systems or environments where memory management needs to be explicit.
  */
 
+#include "locking.h"
 #ifdef USE_BITMAP_ALLOCATOR
 #include "block_allocator.h"
 #endif
@@ -15,6 +16,10 @@
 #include <stdbool.h>
 
 #define STACK_OK 0 // success
+
+// Stack lock macros, reuse lock->write as single lock
+#define TAKE_STACK_LOCK(lock) TAKE_WRITE_LOCK(lock)
+#define CLEAR_STACK_LOCK(lock) CLEAR_WRITE_LOCK(lock)
 
 /**
  * @brief Creates a statically allocated stack instance.
@@ -25,14 +30,16 @@
  *
  * This macro creates a `Stack` variable and backing storage using static memory.
  */
-#define CREATE_STACK(id, count, type_size_)                         \
-    uint8_t __##id##_raw[(count) * (type_size_)] = {0};             \
+#define CREATE_STACK(id, count, type_size_)                        \
+    uint8_t __##id##_raw[(count) * (type_size_)] = {0};            \
+    CREATE_LOCK(id##_lock, count);                                 \
     Stack id = {                                                   \
         .raw = __##id##_raw,                                       \
-        .type_size = (type_size_),                                  \
+        .type_size = (type_size_),                                 \
         .size = (count),                                           \
         .top = 0,                                                  \
-        .full = false                                              \
+        .full = false,                                             \
+        .lock = &id##_lock                                         \
     }
     
 /**
@@ -48,6 +55,7 @@ typedef struct {
     uint16_t type_size; /**< Size of each element in bytes. */
     uint16_t top;       /**< Current top index. */
     void* raw;          /**< Pointer to backing storage. */
+    Lock_t* lock;       /**< Pointer to the lock structure. */
 } Stack;
 
 #ifdef USE_BITMAP_ALLOCATOR
@@ -84,7 +92,7 @@ void stackClear(Stack* stack);
  *
  * @param stack   Pointer to the stack.
  * @param data    Pointer to the data to push. Must be `type_size` bytes long.
- * @return 0 on success, or a negative error code (e.g. if the stack is full).
+ * @return stack index, or a negative error code (e.g. if the stack is full).
  */
 int stackPush(Stack* stack, const void* data);
 
@@ -94,6 +102,6 @@ int stackPush(Stack* stack, const void* data);
  * @param stack   Pointer to the stack.
  * @param data    Pointer to the memory where the popped data will be written.
  *                Must be `type_size` bytes long.
- * @return 0 on success, or a negative error code (e.g. if the stack is empty).
+ * @return stack index, or a negative error code (e.g. if the stack is empty).
  */
 int stackPop(Stack* stack, void* data);
