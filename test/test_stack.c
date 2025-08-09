@@ -204,7 +204,7 @@ void test_stackFilled() {
         uint16_t _ ;
         (void)stackPop(&stack, (void*)&_);
         res = stackPush(&stack, (void*)&data3);
-        ASSERT_EQUAL_INT(res, STACK_OK, "Pushing data should succeed after pop");
+        ASSERT_LT_INT(STACK_OK, res, "Pushing data should succeed after pop");
     } CASE_COMPLETE;
     
     

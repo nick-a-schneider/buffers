@@ -128,6 +128,25 @@ int bufferWrite(Buffer* buffer, const void* data);
 int bufferWriteRaw(Buffer* buffer, const void* data, uint16_t size);
 
 /**
+ * @brief Claim a buffer slot address without copying data.
+ *
+ * @param buffer Pointer to the buffer.
+ * @param[out] out_addr Pointer to store the address of the slot.
+ * 
+ * @return Slot index on success, negative errno on failure.
+ */
+int bufferWriteClaim(Buffer* buffer, void** out_addr);
+
+/**
+ * @brief Release a buffer slot after claiming.
+ * 
+ * @param buffer Pointer to the buffer.
+ * @param index Slot index to release.
+ * @return negative errno on failure
+ */
+int bufferWriteRelease(Buffer* buffer, uint16_t index);
+
+/**
  * @brief Reads one element from the buffer.
  * 
  * @param buffer The Buffer to read from.
@@ -151,3 +170,22 @@ int bufferRead(Buffer* buffer, void* data);
  * - `-EAGAIN` if the buffer is empty
  */
 int bufferReadRaw(Buffer* buffer, void* data, uint16_t size);
+
+/**
+ * @brief Claim a buffer slot address without copying data.
+ *
+ * @param buffer Pointer to the buffer.
+ * @param[out] out_addr Pointer to store the address of the slot.
+ * 
+ * @return Slot index on success, negative errno on failure.
+ */
+int bufferReadClaim(Buffer* buffer, void** out_addr);
+
+/**
+ * @brief Release a buffer slot after claiming.
+ * 
+ * @param buffer Pointer to the buffer.
+ * @param index Slot index to release.
+ * @return negative errno on failure
+ */
+int bufferReadRelease(Buffer* buffer, uint16_t index);

@@ -111,10 +111,16 @@ bool bufferIsFull(const Buffer* buffer) {
     return buffer->full;
 }
 
-int bufferWriteRaw(Buffer* buffer, const void* data, uint16_t size) {
+/**
+ * @details
+ * This function claims a slot and returns its address so that
+ * a DMA engine can write directly into it. The slot will remain
+ * in the `BUFFER_CLAIMED` state until `bufferWriteComplete()`
+ * is called.
+ */
+int bufferWriteClaim(Buffer* buffer, void** out_addr) {
     // ensure arguments are valid
-    if (!buffer || !data) return -EINVAL;
-    if (size == 0 || size > buffer->type_size) return -EINVAL;
+    if (!buffer || !out_addr) return -EINVAL;
     // claim the write lock or exit if busy
     if (!TAKE_WRITE_LOCK(buffer->lock)) {
         return -EBUSY;
@@ -126,14 +132,13 @@ int bufferWriteRaw(Buffer* buffer, const void* data, uint16_t size) {
     }
     // check if the current slot has already been claimed
     uint16_t cur_head = buffer->head;
-    uint8_t slot_expected = BUFFER_FREE;
-    if (!EXPECT_SLOT_STATE(buffer->lock, cur_head, &slot_expected, BUFFER_CLAIMED)) {
+    uint8_t expected = BUFFER_FREE;
+    if (!EXPECT_SLOT_STATE(buffer->lock, cur_head, &expected, BUFFER_CLAIMED)) {
         CLEAR_WRITE_LOCK(buffer->lock);
-        // another process has claimed the slot
         return -EBUSY;
     }
     // With all checks down, we can claim the slot
-    uint8_t* head_addr = (uint8_t*)buffer->raw + (cur_head * buffer->type_size);
+    *out_addr = (uint8_t*)buffer->raw + (cur_head * buffer->type_size);
     // advance the head and mark if the buffer is now full
     buffer->head = (uint16_t)((cur_head + 1) % buffer->size);
     if (buffer->head == buffer->tail) {
@@ -141,12 +146,37 @@ int bufferWriteRaw(Buffer* buffer, const void* data, uint16_t size) {
     }
     // release the write lock so concurrent writers can claim a slot
     CLEAR_WRITE_LOCK(buffer->lock);
+    return cur_head;
+}
+
+/** 
+ * @details
+ * Releases a slot that was previously claimed with `bufferWriteClaim()`.
+ * The slot is set to `BUFFER_FREE` and the lock is released.
+ */
+int bufferWriteRelease(Buffer* buffer, uint16_t index) {
+    if (!buffer) return -EINVAL;
+    uint8_t expected = BUFFER_CLAIMED;
+    if (!EXPECT_SLOT_STATE(buffer->lock, index, &expected, BUFFER_FREE)) {
+        return -EPERM;
+    }
+    return BUFFER_OK;
+}
+
+int bufferWriteRaw(Buffer* buffer, const void* data, uint16_t size) {
+    // ensure arguments are valid
+    if (!buffer || !data) return -EINVAL;
+    if (size == 0 || size > buffer->type_size) return -EINVAL;
+    // claim the write lock or exit if busy
+    uint8_t* head_addr;
+    int res = bufferWriteClaim(buffer, (void**)&head_addr);
+    if (res < BUFFER_OK) return res;
     // copy the data into the slot
     memcpy((void*)head_addr, data, size);
     // mark the slot as ready to be read
-    SET_SLOT_STATE(buffer->lock, cur_head, BUFFER_READY);
+    SET_SLOT_STATE(buffer->lock, res, BUFFER_READY);
     // exit
-    return cur_head;
+    return res;
 }
 
 int bufferWrite(Buffer* buffer, const void* data) {
@@ -154,18 +184,9 @@ int bufferWrite(Buffer* buffer, const void* data) {
     return bufferWriteRaw(buffer, data, buffer->type_size);
 }
 
-/**
- * @details
- * Reads one element from the buffer at the current tail index.
- * The element is copied into the memory pointed to by `data`.
- *
- * After reading, the tail index is advanced modulo `size`, and the buffer is
- * marked as not full.
- */
-int bufferReadRaw(Buffer* buffer, void* data, uint16_t size) {
+int bufferReadClaim(Buffer* buffer, void** out_addr) {
     // ensure arguments are valid
-    if (!buffer  || !data) return -EINVAL;
-    if (size == 0 || size > buffer->type_size) return -EINVAL;
+    if (!buffer || !out_addr) return -EINVAL;
     // claim the read lock or exit if busy
     if (!TAKE_READ_LOCK(buffer->lock)) {
         return -EBUSY;
@@ -180,21 +201,50 @@ int bufferReadRaw(Buffer* buffer, void* data, uint16_t size) {
     uint8_t slot_expected = BUFFER_READY;
     if (!EXPECT_SLOT_STATE(buffer->lock, cur_tail, &slot_expected, BUFFER_READING)) {
         CLEAR_READ_LOCK(buffer->lock);
-        // another process has claimed the slot
         return -EBUSY;
     }
     // With all checks down, we can claim the slot
-    uint8_t* tail_addr = (uint8_t*)buffer->raw + (buffer->tail * buffer->type_size);
-    buffer->tail = (uint16_t)((buffer->tail + 1) % buffer->size);
-    buffer->full = false;
+    *out_addr = (uint8_t*)buffer->raw + (cur_tail * buffer->type_size);
+    // advance the tail and remove the full flag
+    if (buffer->head == buffer->tail) {
+        buffer->full = false;
+    }
+    buffer->tail = (uint16_t)((cur_tail + 1) % buffer->size);
     // release the read lock so concurrent readers can claim a slot
     CLEAR_READ_LOCK(buffer->lock);
+    return cur_tail;
+}
+
+/**
+ * @details
+ * Reads one element from the buffer at the current tail index.
+ * The element is copied into the memory pointed to by `data`.
+ *
+ * After reading, the tail index is advanced modulo `size`, and the buffer is
+ * marked as not full.
+ */
+int bufferReadRaw(Buffer* buffer, void* data, uint16_t size) {
+    // ensure arguments are valid
+    if (!buffer  || !data) return -EINVAL;
+    if (size == 0 || size > buffer->type_size) return -EINVAL;
+    uint8_t* tail_addr;
+    int cur_tail = bufferReadClaim(buffer, (void**)&tail_addr);
+    if (cur_tail < BUFFER_OK) return cur_tail;
     // copy the data from the slot
     memcpy(data, (void*)tail_addr, size);
     // mark the slot as free
     SET_SLOT_STATE(buffer->lock, cur_tail, BUFFER_FREE);
     // exit
     return cur_tail;
+}
+
+int bufferReadRelease(Buffer* buffer, uint16_t index) {
+    if (!buffer) return -EINVAL;
+    uint8_t expected = BUFFER_READING;
+    if (!EXPECT_SLOT_STATE(buffer->lock, index, &expected, BUFFER_READY)) {
+        return -EPERM;
+    }
+    return BUFFER_OK;
 }
 
 int bufferRead(Buffer* buffer, void* data) {

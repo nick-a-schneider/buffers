@@ -118,6 +118,15 @@ int queueWrite(Queue* queue, const uint8_t* data, uint16_t len) {
     return len;
 }
 
+
+int queueWriteClaim(Queue* queue, uint8_t** data) {
+    return bufferWriteClaim(queue->slot_buffer, (void**)data);
+}
+
+int queueWriteRelease(Queue* queue, uint16_t index) {
+    return bufferWriteRelease(queue->slot_buffer, index);
+}
+
 /**
  * @details
  * Reads the next message from the queue into the provided buffer.
@@ -138,4 +147,12 @@ int queueRead(Queue* queue, uint8_t* data, uint16_t len) {
     for (uint16_t i = msg_len; i < len; i++) data[i] = '\0';
     queue->msg_len[res] = 0;
     return msg_len;
+}
+
+int queueReadClaim(Queue* queue, uint8_t** data) {
+    return bufferReadClaim(queue->slot_buffer, (void**)data);
+}
+
+int queueReadRelease(Queue* queue, uint16_t index) {
+    return bufferReadRelease(queue->slot_buffer, index);
 }
