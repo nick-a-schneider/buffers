@@ -157,7 +157,7 @@ int bufferWriteClaim(Buffer* buffer, void** out_addr) {
 int bufferWriteRelease(Buffer* buffer, uint16_t index) {
     if (!buffer) return -EINVAL;
     uint8_t expected = BUFFER_CLAIMED;
-    if (!EXPECT_SLOT_STATE(buffer->lock, index, &expected, BUFFER_FREE)) {
+    if (!EXPECT_SLOT_STATE(buffer->lock, index, &expected, BUFFER_READY)) {
         return -EPERM;
     }
     return BUFFER_OK;
@@ -241,7 +241,7 @@ int bufferReadRaw(Buffer* buffer, void* data, uint16_t size) {
 int bufferReadRelease(Buffer* buffer, uint16_t index) {
     if (!buffer) return -EINVAL;
     uint8_t expected = BUFFER_READING;
-    if (!EXPECT_SLOT_STATE(buffer->lock, index, &expected, BUFFER_READY)) {
+    if (!EXPECT_SLOT_STATE(buffer->lock, index, &expected, BUFFER_FREE)) {
         return -EPERM;
     }
     return BUFFER_OK;
