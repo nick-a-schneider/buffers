@@ -127,11 +127,12 @@ int queueWriteClaim(Queue* queue, uint8_t** data);
  * @brief Releases a claimed message slot from the queue.
  *
  * @param queue Pointer to the queue.
- * @param index Index of the message to release.
+ * @param index Index of the slot to release.
+ * @param len   Length of the message written to the slot.
  *
  * @return Number of bytes released on success, or a negative error code on failure.
  */
-int queueWriteRelease(Queue* queue, uint16_t index);
+int queueWriteRelease(Queue* queue, uint16_t index, uint16_t len);
 
 /**
  * @brief Reads (dequeues) the next message from the queue.

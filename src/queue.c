@@ -123,7 +123,8 @@ int queueWriteClaim(Queue* queue, uint8_t** data) {
     return bufferWriteClaim(queue->slot_buffer, (void**)data);
 }
 
-int queueWriteRelease(Queue* queue, uint16_t index) {
+int queueWriteRelease(Queue* queue, uint16_t index, uint16_t len) {
+    queue->msg_len[index] = len;
     return bufferWriteRelease(queue->slot_buffer, index);
 }
 
