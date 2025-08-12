@@ -150,8 +150,11 @@ int queueRead(Queue* queue, uint8_t* data, uint16_t len) {
     return msg_len;
 }
 
-int queueReadClaim(Queue* queue, uint8_t** data) {
-    return bufferReadClaim(queue->slot_buffer, (void**)data);
+int queueReadClaim(Queue* queue, uint8_t** data, uint16_t* len) {
+    int res =  bufferReadClaim(queue->slot_buffer, (void**)data);
+    if (res < BUFFER_OK) return res;
+    *len = queue->msg_len[res];
+    return res;
 }
 
 int queueReadRelease(Queue* queue, uint16_t index) {

@@ -153,10 +153,11 @@ int queueRead(Queue* queue, uint8_t* data, uint16_t len);
  *
  * @param queue Pointer to the queue.
  * @param data  Output pointer to store the claimed message.
+ * @param len   Output pointer to store the length of the claimed message.
  *
  * @return Number of bytes claimed on success, or a negative error code on failure.
  */
-int queueReadClaim(Queue* queue, uint8_t** data);
+int queueReadClaim(Queue* queue, uint8_t** data, uint16_t* len);
 
 /**
  * @brief Releases a claimed message slot from the queue.
